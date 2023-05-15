@@ -1,0 +1,3 @@
+[submodule "hailEngine"]
+	path = hailEngine
+	url = https://github.com/CatsLover2006/hailEngine.git
