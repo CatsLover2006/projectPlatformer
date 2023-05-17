@@ -2,27 +2,32 @@ cmake_minimum_required(VERSION 3.0)
 set(CXX_STANDARD 11)
 set(CXX_STANDARD_REQUIRED true)
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_OSX_ARCHITECTURES "x86_64")
 project(projectPlatformer)
+
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
 
 set(sourceFiles ${sourceFiles} 
     sdlWrapper.cpp
     main.cpp
-    hailEngine/line.cpp
-    hailEngine/base.cpp
-    hailEngine/collider.cpp
-    hailEngine/object.cpp
 )
 
-# SDL check
-option(SDL_VENDORED "Use vendor SDL2" OFF)
-if(SDL_VENDORED)
-    add_subdirectory(vendored/sdl EXCLUDE_FROM_ALL)
-else()
-    find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
-endif()
+set(textures assets/textures/Cat.png)
+
+find_package(SDL2 REQUIRED)
+find_package(SDL2_image REQUIRED)
+include_directories(${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS})
 
 # Create executable
 add_executable(projectPlatformer MACOSX_BUNDLE ${sourceFiles})
 
-# Link libraries
-target_link_libraries(projectPlatformer PRIVATE SDL2::SDL2)
+# Link libs
+target_link_libraries(projectPlatformer ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
+
+# Copy resources
+target_sources(projectPlatformer PRIVATE ${textures})
+set_source_files_properties(
+  ${textures}
+  PROPERTIES
+    MACOSX_PACKAGE_LOCATION Resources/assets/textures
+)
