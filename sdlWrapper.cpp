@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <random>
 #include <vector>
+#include <algorithm>
 #include "sdlWrapper.hpp"
 
 namespace SDLwrapper {
@@ -74,7 +75,7 @@ namespace SDLwrapper {
 		SDL_RenderClear(renderer);
 	}
 
-	void Window::drawRect(Color * color, int x, int y, int w, int h) {
+	void Window::drawRect(Color * color, double x, double y, double w, double h) {
 		SDL_SetRenderDrawColor(renderer, color->r, color->g, color->b, color->a);
 		SDL_Rect rect;
 		rect.x = x;
@@ -89,7 +90,7 @@ namespace SDLwrapper {
     	SDL_RenderFillRect(renderer, &rect);
 	}
 
-	void Window::strokeRect(Color * color, int x, int y, int w, int h) {
+	void Window::strokeRect(Color * color, double x, double y, double w, double h) {
 		SDL_SetRenderDrawColor(renderer, color->r, color->g, color->b, color->a);
 		SDL_Rect rect;
 		rect.x = x;
@@ -104,24 +105,56 @@ namespace SDLwrapper {
     	SDL_RenderDrawRect(renderer, &rect);
 	}
 
-	void Window::drawLine(Color* color, int x1, int y1, int x2, int y2) {
+	void Window::drawLine(Color* color, double x1, double y1, double x2, double y2) {
 		SDL_SetRenderDrawColor(renderer, color->r, color->g, color->b, color->a);
     	SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
 	}
 
-	void Window::drawImage(Image* image, int x, int y) {
+	void Window::drawImage(Image* image, double x, double y) {
 		drawImage(image, x, y, image->w, image->h);
 	}
 
-	void Window::drawImage(Image* image, int x, int y, int w, int h) {
+	void Window::drawImage(Image* image, double x, double y, double w, double h) {
 		if (windowID != image->linkedWindow) return;
-		SDL_Rect loc;
+		SDL_FRect loc;
 		loc.x = x;
 		loc.y = y;
 		loc.w = w;
 		loc.h = h;
-		SDL_RenderCopy(renderer, image->getImage(), NULL, &loc);
-		// TODO: draw the image;
+		SDL_RenderCopyF(renderer, image->getImage(), NULL, &loc);
+	}
+
+	void Window::drawImageEx(Image* image, double x, double y, bool flipH, bool flipV) {
+		drawImageEx(image, x, y, image->w, image->h, flipH, flipV, 0);
+	}
+
+	void Window::drawImageEx(Image* image, double x, double y, double w, double h, bool flipH, bool flipV) {
+		drawImageEx(image, x, y, image->w, image->h, flipH, flipV, 0);
+	}
+
+	void Window::drawImageEx(Image* image, double x, double y, double angle) {
+		drawImageEx(image, x, y, image->w, image->h, false, false, angle);
+	}
+
+	void Window::drawImageEx(Image* image, double x, double y, double w, double h, double angle) {
+		drawImageEx(image, x, y, w, h, false, false, angle);
+	}
+
+	void Window::drawImageEx(Image* image, double x, double y, bool flipH, bool flipV, double angle) {
+		drawImageEx(image, x, y, image->w, image->h, flipH, flipV, angle);
+	}
+
+	void Window::drawImageEx(Image* image, double x, double y, double w, double h, bool flipH, bool flipV, double angle) {
+		if (windowID != image->linkedWindow) return;
+		SDL_FRect loc;
+		loc.x = x;
+		loc.y = y;
+		loc.w = w;
+		loc.h = h;
+		SDL_RendererFlip flipMode = SDL_FLIP_NONE;
+		if (flipH) flipMode = (SDL_RendererFlip)(flipMode | SDL_FLIP_HORIZONTAL);
+		if (flipV) flipMode = (SDL_RendererFlip)(flipMode | SDL_FLIP_VERTICAL);
+		SDL_RenderCopyExF(renderer, image->getImage(), NULL, &loc, angle, NULL, flipMode);
 	}
 
 	void Window::runInput() {
@@ -131,33 +164,37 @@ namespace SDLwrapper {
 			switch (event.type) {
 				case SDL_QUIT: {
 					exit(0);
-					break;
+					continue;
 				}
 				case SDL_KEYDOWN:
 				case SDL_KEYUP: {
-					if (event.key.repeat) break;
+					if (event.key.repeat) continue;
 					switch (event.key.type) {
 						case SDL_KEYDOWN: {
 							keysDown.push_back(event.key.keysym.sym);
-							break;
+							continue;
 						}
-						default: {
-							for (std::vector<SDL_Keycode>::iterator i = keysDown.begin(); i != keysDown.end();) {
-								if (*i == event.key.keysym.sym) {
-									keysDown.erase(i);
-								}
-							}
+						case SDL_KEYUP: {
+							keysDown.erase(std::remove(keysDown.begin(), keysDown.end(), event.key.keysym.sym), keysDown.end());
+							continue;
 						}
+						default: 
+							continue;
 					}
-					break;
+					continue;
 				}
 				default:
-					break;
+					continue;
 			}
 		}
 	}
 
 	void Window::quit() {
 		SDL_Quit();
+	}
+
+	bool Window::keyPressed(std::string key) {
+		SDL_Keycode keyCode = SDL_GetKeyFromName(key.c_str());
+		return std::find(keysDown.begin(), keysDown.end(), keyCode) != keysDown.end();
 	}
 }

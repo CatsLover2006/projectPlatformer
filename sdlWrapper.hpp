@@ -1,5 +1,5 @@
-#include "SDL.h"
-#include "SDL_image.h"
+#include "SDL2/SDL.h"
+#include "SDL2/SDL_image.h"
 
 namespace SDLwrapper {
 	class Window;
@@ -38,14 +38,21 @@ namespace SDLwrapper {
 
 		void presentWindow();
 		void clearScreen(Color * color);
-		void drawRect(Color * color, int x, int y, int w, int h);
+		void drawRect(Color * color, double x, double y, double w, double h);
 		void drawRect(Color * color, SDL_Rect rect);
-		void strokeRect(Color * color, int x, int y, int w, int h);
+		void strokeRect(Color * color, double x, double y, double w, double h);
 		void strokeRect(Color * color, SDL_Rect rect);
-		void drawLine(Color* color, int x1, int y1, int x2, int y2);
-		void drawImage(Image* image, int x, int y);
-		void drawImage(Image* image, int x, int y, int w, int h);
+		void drawLine(Color* color, double x1, double y1, double x2, double y2);
+		void drawImage(Image* image, double x, double y);
+		void drawImage(Image* image, double x, double y, double w, double h);
+		void drawImageEx(Image* image, double x, double y, bool flipH, bool flipV);
+		void drawImageEx(Image* image, double x, double y, double w, double h, bool flipH, bool flipV);
+		void drawImageEx(Image* image, double x, double y, double angle);
+		void drawImageEx(Image* image, double x, double y, double w, double h, double angle);
+		void drawImageEx(Image* image, double x, double y, bool flipH, bool flipV, double angle);
+		void drawImageEx(Image* image, double x, double y, double w, double h, bool flipH, bool flipV, double angle);
 		void runInput();
+		bool keyPressed(std::string key);
 		void quit();
 		SDL_Renderer * internalGetRenderer();
 	private: 
