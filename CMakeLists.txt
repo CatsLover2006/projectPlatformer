@@ -15,9 +15,8 @@ set(sourceFiles ${sourceFiles}
     main.cpp
     collider.cpp
     object.cpp
+    player.cpp
 )
-
-set(textures assets/textures/Cat.png)
 
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
@@ -30,9 +29,8 @@ add_executable(projectPlatformer MACOSX_BUNDLE ${sourceFiles})
 target_link_libraries(projectPlatformer ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
 
 # Copy resources
-target_sources(projectPlatformer PRIVATE ${textures})
-set_source_files_properties(
-  ${textures}
-  PROPERTIES
-    MACOSX_PACKAGE_LOCATION Resources/assets/textures
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_SOURCE_DIR}/assets"
+    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/assets"
 )

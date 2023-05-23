@@ -49,6 +49,21 @@ namespace CollisionHandler {
 		this->y = y;
 	}
 
+	double Collider::getBound_t() {return 0;} // Stub
+	double Collider::getBound_b() {return 0;} // Stub
+	double Collider::getBound_l() {return 0;} // Stub
+	double Collider::getBound_r() {return 0;} // Stub
+
+	double BoxCollider::getBound_t() {return y;}
+	double BoxCollider::getBound_b() {return y+h;}
+	double BoxCollider::getBound_l() {return x;}
+	double BoxCollider::getBound_r() {return x+w;}
+
+	double RightTriCollider::getBound_t() {return min(y, y2);}
+	double RightTriCollider::getBound_b() {return max(y, y2);}
+	double RightTriCollider::getBound_l() {return min(x, x2);}
+	double RightTriCollider::getBound_r() {return max(x, x2);}
+
 	bool Collider::colliding(Collider other) {
 		return false;
 	}

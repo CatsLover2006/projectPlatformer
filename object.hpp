@@ -1,10 +1,10 @@
 namespace ObjectHandler {
 	class Object {
 	public:
-		CollisionHandler::Collider collision;
+		CollisionHandler::Collider * collision;
 		virtual void draw(SDLwrapper::Window * window);
 		virtual void step(double deltaTime);
-		Object(CollisionHandler::Collider collision);
+		Object(CollisionHandler::Collider * collision);
 	};
 	class DynamicObject: public Object {
 	public:
@@ -13,10 +13,10 @@ namespace ObjectHandler {
 		void unintersectX(Object other);
 		virtual void draw(SDLwrapper::Window * window);
 		virtual void step(double deltaTime);
-		DynamicObject(CollisionHandler::Collider collision, double grav, std::vector<SDLwrapper::Image> sprites);
-	private:
+		DynamicObject(CollisionHandler::Collider * collision, double grav, std::vector<SDLwrapper::Image *> sprites);
+	protected:
 		double grav;
-		std::vector<SDLwrapper::Image> sprites;
+		std::vector<SDLwrapper::Image *> sprites;
 	};
 	class GroundObject: public Object {
 	public:
@@ -24,9 +24,9 @@ namespace ObjectHandler {
 		double animSpeed;
 		void draw(SDLwrapper::Window * window);
 		void step(double deltaTime);
-		GroundObject(CollisionHandler::Collider collision, std::vector<SDLwrapper::Image> sprites, double animSpeed);
+		GroundObject(CollisionHandler::Collider * collision, std::vector<SDLwrapper::Image *> sprites, double animSpeed);
 	private:
 		double animTmr;
-		std::vector<SDLwrapper::Image> sprites;
+		std::vector<SDLwrapper::Image *> sprites;
 	};
 }

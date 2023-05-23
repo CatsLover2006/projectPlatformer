@@ -1,4 +1,5 @@
 #include <string> // Error fixing
+#include <iostream>
 #include <vector>
 #include <typeinfo>
 #include "collider.hpp"
@@ -6,7 +7,7 @@
 #include "object.hpp"
 
 namespace ObjectHandler {
-	Object::Object (CollisionHandler::Collider collision) {
+	Object::Object (CollisionHandler::Collider * collision) {
 		this->collision = collision;
 	}
 
@@ -14,17 +15,18 @@ namespace ObjectHandler {
 
 	void Object::step(double deltaTime) {} // Stub
 
-	void DynamicObject::draw(SDLwrapper::Window * window) {} // Stub to Compile
+	void DynamicObject::draw(SDLwrapper::Window * window) {} // Stub
 
-	void DynamicObject::step(double deltaTime) {} // Stub to Compile
+	void DynamicObject::step(double deltaTime) {} // Stub
 
-	DynamicObject::DynamicObject (CollisionHandler::Collider collision, double grav, std::vector<SDLwrapper::Image> sprites): Object(collision) {
+	DynamicObject::DynamicObject (CollisionHandler::Collider * collision, double grav, std::vector<SDLwrapper::Image *> sprites): Object(collision) {
 		this->grav = grav;
 		this->sprites = sprites;
 	}
 
-	GroundObject::GroundObject(CollisionHandler::Collider collision, std::vector<SDLwrapper::Image> sprites): Object(collision) {
+	GroundObject::GroundObject(CollisionHandler::Collider * collision, std::vector<SDLwrapper::Image *> sprites, double animSpeed): Object(collision) {
 		this->sprites = sprites;
+		this->animSpeed = animSpeed;
 	}
 
 	void GroundObject::step(double deltaTime) {
@@ -36,10 +38,20 @@ namespace ObjectHandler {
 	}
 
 	void GroundObject::draw(SDLwrapper::Window * window) {
-		window.drawImage(sprites[spr * 9], collision.x, collision.y);
-		window.drawImage(sprites[spr * 9 + 2], collision.x + collision.w - sprites[spr * 9 + 2].w, collision.y);
-		window.drawImage(sprites[spr * 9 + 6], collision.x, collision.y + collision.h - sprites[spr * 9 + 4].h);
-		window.drawImage(sprites[spr * 9 + 2], collision.x + collision.w - sprites[spr * 9 + 6].w, collision.y + collision.h - sprites[spr * 9 + 6].h);
-		//for (int xL = 0; xL +=)
+		for (double x = collision->getBound_l() + sprites[spr * 9]->w; x < collision->getBound_r() - sprites[spr * 9 + 2]->w; x += sprites[spr * 9 + 4]->w)
+			for (double y = collision->getBound_t() + sprites[spr * 9]->h; y < collision->getBound_b() - sprites[spr * 9 + 6]->w; y += sprites[spr * 9 + 4]->h)
+				window->drawImage(sprites[spr * 9 + 4], x, y);
+		for (double x = collision->getBound_l() + sprites[spr * 9]->w; x < collision->getBound_r() - sprites[spr * 9 + 2]->w; x += sprites[spr * 9 + 1]->w) {
+			window->drawImage(sprites[spr * 9 + 1], x, collision->getBound_t());
+			window->drawImage(sprites[spr * 9 + 7], x, collision->getBound_b() - sprites[spr * 9 + 7]->h);
+		}
+		for (double y = collision->getBound_t() + sprites[spr * 9]->h; y < collision->getBound_b() - sprites[spr * 9 + 6]->w; y += sprites[spr * 9 + 3]->h) {
+			window->drawImage(sprites[spr * 9 + 3], collision->getBound_l(), y);
+			window->drawImage(sprites[spr * 9 + 6], collision->getBound_r() - sprites[spr * 9 + 6]->w, y);
+		}
+		window->drawImage(sprites[spr * 9], collision->getBound_l(), collision->getBound_t());
+		window->drawImage(sprites[spr * 9 + 2], collision->getBound_r() - sprites[spr * 9 + 2]->w, collision->getBound_t());
+		window->drawImage(sprites[spr * 9 + 6], collision->getBound_l(), collision->getBound_b() - sprites[spr * 9 + 6]->h);
+		window->drawImage(sprites[spr * 9 + 8], collision->getBound_r() - sprites[spr * 9 + 8]->w, collision->getBound_b() - sprites[spr * 9 + 8]->h);
 	}
 }
