@@ -11,7 +11,8 @@ project(projectPlatformer)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
 
 set(sourceFiles ${sourceFiles} 
-    sdlWrapper.cpp
+    hailLib/sdlWrapper.cpp
+    hailLib/basemath.cpp
     main.cpp
     collider.cpp
     object.cpp

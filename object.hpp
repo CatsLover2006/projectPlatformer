@@ -5,12 +5,14 @@ namespace ObjectHandler {
 		virtual void draw(SDLwrapper::Window * window);
 		virtual void step(double deltaTime);
 		Object(CollisionHandler::Collider * collision);
+	protected:
+		static std::vector<Object*> objectList;
 	};
 	class DynamicObject: public Object {
 	public:
 		double vX, vY;
-		void unintersectY(Object other);
-		void unintersectX(Object other);
+		void unintersectY(Object * other);
+		void unintersectX(Object * other);
 		virtual void draw(SDLwrapper::Window * window);
 		virtual void step(double deltaTime);
 		DynamicObject(CollisionHandler::Collider * collision, double grav, std::vector<SDLwrapper::Image *> sprites);

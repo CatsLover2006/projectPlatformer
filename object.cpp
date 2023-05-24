@@ -1,14 +1,16 @@
 #include <string> // Error fixing
-#include <iostream>
 #include <vector>
 #include <typeinfo>
 #include "collider.hpp"
-#include "sdlWrapper.hpp"
+#include "hailLib/sdlWrapper.hpp"
 #include "object.hpp"
 
 namespace ObjectHandler {
+	std::vector<Object*> Object::objectList;
+
 	Object::Object (CollisionHandler::Collider * collision) {
 		this->collision = collision;
+		objectList.push_back(this);
 	}
 
 	void Object::draw(SDLwrapper::Window * window) {} // Stub
@@ -53,5 +55,117 @@ namespace ObjectHandler {
 		window->drawImage(sprites[spr * 9 + 2], collision->getBound_r() - sprites[spr * 9 + 2]->w, collision->getBound_t());
 		window->drawImage(sprites[spr * 9 + 6], collision->getBound_l(), collision->getBound_b() - sprites[spr * 9 + 6]->h);
 		window->drawImage(sprites[spr * 9 + 8], collision->getBound_r() - sprites[spr * 9 + 8]->w, collision->getBound_b() - sprites[spr * 9 + 8]->h);
+	}
+
+	void DynamicObject::unintersectY(Object * other) {
+		double accuracy = 1;
+		while (accuracy > 0.000000001) {
+			while (collision->colliding(other->collision)) {
+				if (typeid(other) == typeid(DynamicObject)) {
+					if (collision->getMid_y() > other->collision->getMid_y()) {
+						collision->y += accuracy;
+						other->collision->y -= accuracy;
+					} else {
+						collision->y -= accuracy;
+						other->collision->y += accuracy;
+					}
+				} else {
+					if (collision->getMid_y() > other->collision->getMid_y())
+						collision->y += accuracy;
+					else
+						collision->y -= accuracy;
+				}
+			}
+			accuracy/=10;
+			while (!collision->colliding(other->collision)) {
+				if (typeid(other) == typeid(DynamicObject)) {
+					if (collision->getMid_y() > other->collision->getMid_y()) {
+						collision->y -= accuracy;
+						other->collision->y += accuracy;
+					} else {
+						collision->y += accuracy;
+						other->collision->y -= accuracy;
+					}
+				} else {
+					if (collision->getMid_y() > other->collision->getMid_y())
+						collision->y -= accuracy;
+					else
+						collision->y += accuracy;
+				}
+			}
+			accuracy/=10;
+		}
+		while (collision->colliding(other->collision)) {
+			if (typeid(other) == typeid(DynamicObject)) {
+				if (collision->getMid_y() > other->collision->getMid_y()) {
+					collision->y += accuracy;
+					other->collision->y -= accuracy;
+				} else {
+					collision->y -= accuracy;
+					other->collision->y += accuracy;
+				}
+			} else {
+				if (collision->getMid_y() > other->collision->getMid_y())
+					collision->y += accuracy;
+				else
+					collision->y -= accuracy;
+			}
+		}
+	}
+
+	void DynamicObject::unintersectX(Object * other) {
+		double accuracy = 1;
+		while (accuracy > 0.000000001) {
+			while (collision->colliding(other->collision)) {
+				if (typeid(other) == typeid(DynamicObject)) {
+					if (collision->getMid_x() > other->collision->getMid_x()) {
+						collision->x += accuracy;
+						other->collision->x -= accuracy;
+					} else {
+						collision->x -= accuracy;
+						other->collision->x += accuracy;
+					}
+				} else {
+					if (collision->getMid_x() > other->collision->getMid_x())
+						collision->x += accuracy;
+					else
+						collision->x -= accuracy;
+				}
+			}
+			accuracy/=10;
+			while (!collision->colliding(other->collision)) {
+				if (typeid(other) == typeid(DynamicObject)) {
+					if (collision->getMid_x() > other->collision->getMid_x()) {
+						collision->x -= accuracy;
+						other->collision->x += accuracy;
+					} else {
+						collision->x += accuracy;
+						other->collision->x -= accuracy;
+					}
+				} else {
+					if (collision->getMid_x() > other->collision->getMid_x())
+						collision->x -= accuracy;
+					else
+						collision->x += accuracy;
+				}
+			}
+			accuracy/=10;
+		}
+		while (collision->colliding(other->collision)) {
+			if (typeid(other) == typeid(DynamicObject)) {
+				if (collision->getMid_x() > other->collision->getMid_x()) {
+					collision->x += accuracy;
+					other->collision->x -= accuracy;
+				} else {
+					collision->x -= accuracy;
+					other->collision->x += accuracy;
+				}
+			} else {
+				if (collision->getMid_x() > other->collision->getMid_x())
+					collision->x += accuracy;
+				else
+					collision->x -= accuracy;
+			}
+		}
 	}
 }

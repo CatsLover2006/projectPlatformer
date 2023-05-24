@@ -5,7 +5,8 @@
 #include <vector>
 #include <random>
 #include <algorithm>
-#include "sdlWrapper.hpp"
+#include "hailLib/sdlWrapper.hpp"
+#include "hailLib/baseMath.hpp"
 #include "collider.hpp"
 #include "object.hpp"
 #include "player.hpp"
@@ -85,8 +86,13 @@ int main() {
 		deltaTimer += deltaTime.count();
 		loops = 0;
 		window->runInput();
-		// TODO: pass input to player
 		std::cout << window->keysDown.size() << " keys pressed" << std::endl;
+		inputState = 0;
+		inputState = inputState | (0b00000001 * (window->keyPressed("Space") || window->keyPressed("W") || window->keyPressed("Up")));
+		inputState = inputState | (0b00000010 * (window->keyPressed("S") || window->keyPressed("Down")));
+		inputState = inputState | (0b00000100 * (window->keyPressed("A") || window->keyPressed("Left")));
+		inputState = inputState | (0b00001000 * (window->keyPressed("D") || window->keyPressed("Right")));
+		player->giveInput(inputState);
 		while (deltaTimer > PHYSICS_TIMESTEP) {
 			deltaTimer -= PHYSICS_TIMESTEP;
 			player->step(PHYSICS_TIMESTEP);
