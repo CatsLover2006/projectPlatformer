@@ -22,6 +22,7 @@ namespace CollisionHandler {
 
 
 	Collider::Collider(double x, double y) {
+		collides = true;
 		setLocation(x, y);
 	}
 
@@ -78,7 +79,9 @@ namespace CollisionHandler {
 	}
 
 	bool BoxCollider::colliding(Collider * other) {
+		if (!collides) return false;
 		if (typeid(other) == typeid(RightTriCollider)) return other->colliding(this);
+		if (!other->collides) return false; // Don't waste time in triangle collision check
 		BoxCollider * otherBox = (BoxCollider*)other;
 		return ((hailMath::abs((x + w/2) - (otherBox->x + otherBox->w/2)) * 2 < (w + otherBox->w)) &&
          		(hailMath::abs((y + h/2) - (otherBox->y + otherBox->h/2)) * 2 < (h + otherBox->h)));
@@ -104,6 +107,8 @@ namespace CollisionHandler {
 	}
 
 	bool RightTriCollider::colliding(Collider * other) {
+		if (!collides) return false;
+		if (!other->collides) return false;
 		if (typeid(other) == typeid(RightTriCollider)) {
 			RightTriCollider * otherTri = (RightTriCollider*)other;
 			if ((hailMath::abs((x + x2)/2 - (otherTri->x + otherTri->x2)/2) * 2 < (hailMath::abs(x2-x) + hailMath::abs(otherTri->x2-otherTri->x))) &&

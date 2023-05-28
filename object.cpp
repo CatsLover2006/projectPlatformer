@@ -1,16 +1,25 @@
-#include <string> // Error fixing
+#include <string>
+#include <iostream>
 #include <vector>
+#include <cstdint>
+#include <random>
 #include <typeinfo>
+#include <algorithm>
 #include "collider.hpp"
 #include "hailLib/sdlWrapper.hpp"
 #include "object.hpp"
 
 namespace ObjectHandler {
+	std::mt19937_64 random;
+	std::uniform_int_distribution<uint64_t> idGenerator(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max());
+
 	std::vector<Object*> Object::objectList;
 
 	Object::Object (CollisionHandler::Collider * collision) {
 		this->collision = collision;
+		self = idGenerator(random);
 		objectList.push_back(this);
+		self_ptr = this;
 	}
 
 	void Object::draw(SDLwrapper::Window * window) {} // Stub
@@ -21,40 +30,61 @@ namespace ObjectHandler {
 
 	void DynamicObject::step(double deltaTime) {} // Stub
 
+	GroundObject::~GroundObject() { // Stub 4 now
+	}
+
+	DynamicObject::~DynamicObject() {
+		for (SDLwrapper::Image * img : sprites) {
+			if (img != nullptr) {
+				delete img;
+				img = nullptr;
+			}
+		}
+		sprites.clear();
+	}
+
+	Object::~Object() {
+		delete collision;
+		objectList.erase(std::remove(objectList.begin(), objectList.end(), self_ptr), objectList.end());
+		objectList.shrink_to_fit();
+	}
+
 	DynamicObject::DynamicObject (CollisionHandler::Collider * collision, double grav, std::vector<SDLwrapper::Image *> sprites): Object(collision) {
 		this->grav = grav;
 		this->sprites = sprites;
 	}
 
-	GroundObject::GroundObject(CollisionHandler::Collider * collision, std::vector<SDLwrapper::Image *> sprites, double animSpeed): Object(collision) {
+	GroundObject::GroundObject(CollisionHandler::Collider * collision, std::vector<SDLwrapper::Image *> * sprites, long positions[9], SDLwrapper::Image * debugImage): Object(collision) {
 		this->sprites = sprites;
-		this->animSpeed = animSpeed;
+		for (int i = 0; i < 9; i++) this->positions[i] = positions[i];
+		this->debugImage = debugImage;
 	}
 
 	void GroundObject::step(double deltaTime) {
-		animTmr += deltaTime;
-		while (animTmr > animSpeed) {
-			animTmr -= animSpeed;
-			spr = (spr + 1) % (sprites.size() / 9);
-		}
+		// Nada
+	}
+
+	SDLwrapper::Image * GroundObject::getImageAtPos(long in) {
+		if (in == -1) return debugImage;
+		else return sprites->at(in);
 	}
 
 	void GroundObject::draw(SDLwrapper::Window * window) {
-		for (double x = collision->getBound_l() + sprites[spr * 9]->w; x < collision->getBound_r() - sprites[spr * 9 + 2]->w; x += sprites[spr * 9 + 4]->w)
-			for (double y = collision->getBound_t() + sprites[spr * 9]->h; y < collision->getBound_b() - sprites[spr * 9 + 6]->w; y += sprites[spr * 9 + 4]->h)
-				window->drawImage(sprites[spr * 9 + 4], x, y);
-		for (double x = collision->getBound_l() + sprites[spr * 9]->w; x < collision->getBound_r() - sprites[spr * 9 + 2]->w; x += sprites[spr * 9 + 1]->w) {
-			window->drawImage(sprites[spr * 9 + 1], x, collision->getBound_t());
-			window->drawImage(sprites[spr * 9 + 7], x, collision->getBound_b() - sprites[spr * 9 + 7]->h);
+		for (double x = collision->getBound_l() + getImageAtPos(positions[0])->w; x < collision->getBound_r() - getImageAtPos(positions[2])->w; x += getImageAtPos(positions[4])->w)
+			for (double y = collision->getBound_t() + getImageAtPos(positions[0])->h; y < collision->getBound_b() - getImageAtPos(positions[6])->w; y += getImageAtPos(positions[4])->h)
+				window->drawImage(getImageAtPos(positions[4]), x, y);
+		for (double x = collision->getBound_l() + getImageAtPos(positions[0])->w; x < collision->getBound_r() - getImageAtPos(positions[2])->w; x += getImageAtPos(positions[1])->w) {
+			window->drawImage(getImageAtPos(positions[1]), x, collision->getBound_t());
+			window->drawImage(getImageAtPos(positions[6]), x, collision->getBound_b() - getImageAtPos(positions[6])->h);
 		}
-		for (double y = collision->getBound_t() + sprites[spr * 9]->h; y < collision->getBound_b() - sprites[spr * 9 + 6]->w; y += sprites[spr * 9 + 3]->h) {
-			window->drawImage(sprites[spr * 9 + 3], collision->getBound_l(), y);
-			window->drawImage(sprites[spr * 9 + 6], collision->getBound_r() - sprites[spr * 9 + 6]->w, y);
+		for (double y = collision->getBound_t() + getImageAtPos(positions[0])->h; y < collision->getBound_b() - getImageAtPos(positions[5])->w; y += getImageAtPos(positions[3])->h) {
+			window->drawImage(getImageAtPos(positions[3]), collision->getBound_l(), y);
+			window->drawImage(getImageAtPos(positions[5]), collision->getBound_r() - getImageAtPos(positions[5])->w, y);
 		}
-		window->drawImage(sprites[spr * 9], collision->getBound_l(), collision->getBound_t());
-		window->drawImage(sprites[spr * 9 + 2], collision->getBound_r() - sprites[spr * 9 + 2]->w, collision->getBound_t());
-		window->drawImage(sprites[spr * 9 + 6], collision->getBound_l(), collision->getBound_b() - sprites[spr * 9 + 6]->h);
-		window->drawImage(sprites[spr * 9 + 8], collision->getBound_r() - sprites[spr * 9 + 8]->w, collision->getBound_b() - sprites[spr * 9 + 8]->h);
+		window->drawImage(getImageAtPos(positions[0]), collision->getBound_l(), collision->getBound_t());
+		window->drawImage(getImageAtPos(positions[2]), collision->getBound_r() - getImageAtPos(positions[2])->w, collision->getBound_t());
+		window->drawImage(getImageAtPos(positions[6]), collision->getBound_l(), collision->getBound_b() - getImageAtPos(positions[6])->h);
+		window->drawImage(getImageAtPos(positions[8]), collision->getBound_r() - getImageAtPos(positions[8])->w, collision->getBound_b() - getImageAtPos(positions[8])->h);
 	}
 
 	void DynamicObject::unintersectY(Object * other) {

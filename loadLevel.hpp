@@ -1,0 +1,2 @@
+void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* levelData, std::vector<ObjectHandler::DynamicObject *>* enemyData,
+	std::vector<SDLwrapper::Image *>* images, SDLwrapper::Image * debugImg, SDLwrapper::Window * window);

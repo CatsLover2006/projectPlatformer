@@ -14,6 +14,7 @@ set(sourceFiles ${sourceFiles}
     hailLib/sdlWrapper.cpp
     hailLib/basemath.cpp
     main.cpp
+    loadLevel.cpp
     collider.cpp
     object.cpp
     player.cpp

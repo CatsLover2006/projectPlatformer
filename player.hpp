@@ -11,5 +11,12 @@ namespace GameObjects {
 		uint8_t inputState;
 		double animProgress;
 		short anim;
+		bool flipped;
+		double angles[11]; // body, head, hair, armOut, armFout, legOut, legFout, armIn, armFin, legIn, legFin
+		double tAngles[11];
+		int getFlipMult();
+		bool checkCanJump();
+		bool checkAnimNoset();
+		void updateLimbPos();
 	};
 }
