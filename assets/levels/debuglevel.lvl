@@ -1,6 +1,8 @@
-assets/textures/TestTex/Mid.gif|
-0|320|320|
-1|480|320|
-2|0|352|640|96|-1|-1|-1|-1|0|-1|-1|-1|-1|
+assets/textures/TestTex/Mid.gif|assets/textures/TestTex/Top.gif|assets/textures/TestTex/TopLeft.gif|assets/textures/TestTex/TopRight.gif|assets/textures/Crib/crib_front_test.gif|
+0|48|352|
+1|784|320|-1|-1|4|
+2|0|384|448|96|1|1|1|0|0|0|0|0|0|
+2|448|352|416|128|2|1|1|0|0|0|0|0|0|
+-1|
 -1|
 -1|

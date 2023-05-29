@@ -6,7 +6,9 @@
 #include "hailLib/basemath.hpp"
 #include "collider.hpp"
 #include "object.hpp"
+#include "playerInteractableObjects.hpp"
 #include "player.hpp"
+#include "crib.hpp"
 
 std::ifstream levelFile;
 std::string curLine;
@@ -16,9 +18,10 @@ const std::string delim = "|";
 
 using namespace ObjectHandler;
 using namespace CollisionHandler;
+using namespace GameObjects;
 
-void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* levelData,
-		std::vector<ObjectHandler::DynamicObject *>* enemyData, std::vector<SDLwrapper::Image *>* images, SDLwrapper::Image * debugImg, SDLwrapper::Window * window) {
+void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* levelData, std::vector<ObjectHandler::DynamicObject *>* enemyData,
+		GameObjects::Player * player, std::vector<SDLwrapper::Image *>* images, SDLwrapper::Image * debugImg, SDLwrapper::Window * window) {
 	if (levelFile.is_open()) levelFile.close();
 	levelFile.open(filename, std::ifstream::in);
 	if (!levelFile.is_open()) {
@@ -56,6 +59,21 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 		}
 		std::cout << lineData[0] << std::endl;
 		switch (lineData[0]) {
+			case 0: {
+				player->collision->x = lineData[1] + 4;
+				player->collision->y = lineData[2];
+				player->vX = 0;
+				player->vY = 0;
+				// TODO: spawn door
+				break;
+			}
+			case 1: {
+				long *data = new long[3];
+				for (int i = 0; i < 3; i++) data[i] = lineData[i + 3];
+				levelData->push_back(new Crib(lineData[1], lineData[2], images, data, debugImg));
+				delete[] data;
+				break;
+			}
 			case 2: {
 				long *data = new long[9];
 				for (int i = 0; i < 9; i++) data[i] = lineData[i + 5];

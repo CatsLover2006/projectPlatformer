@@ -7,6 +7,7 @@
 #include "hailLib/basemath.hpp"
 #include "hailLib/sdlWrapper.hpp"
 #include "object.hpp"
+#include "playerInteractableObjects.hpp"
 #include "player.hpp"
 #define PLAYER_ACCEL 1400
 #define PLAYER_FRICTION 3000
@@ -20,6 +21,7 @@ double progress;
 int flipMult;
 double tX, tY, cX, cY, aX, aY, bX, bY, mX, mY;
 bool stepIn, stepOut;
+bool dontReset;
 
 namespace GameObjects {
 	bool Player::checkAnimNoset() {
@@ -39,6 +41,7 @@ namespace GameObjects {
 		collision->y += 4;
 		for (ObjectHandler::Object * obj : objectList) {
 			if (obj == this) continue;
+			if (obj->isTrigger) continue; 
 			if (collision->colliding(obj->collision)) {
 				collision->y -= 4;
 				return true;
@@ -78,24 +81,38 @@ namespace GameObjects {
 				vY = -JUMP_HEIGHT;
 				anim = 3;
 			}
-		} else if (vY < 0 && anim == 3) anim = 3;
+		} else if (vY <= 0 && anim == 3) anim = 3;
 		else anim = 2;
 		if (hailMath::abs(vX) < 20 && !t_disabled) vX = 0; // 20 pixels per second is nothing
 		collision->y -= 4;
 		collision->x += vX * deltaTime;
+		dontReset = false;
 		for (ObjectHandler::Object * obj : objectList) {
 			if (obj == this) continue;
+			if (obj->isTrigger) continue;
 			if (collision->colliding(obj->collision)) {
 				unintersectX(obj);
 				vX = 0;
 			}
 		}
-		collision->y += vY * deltaTime + 4;
+		collision->y += 4;
+		collision->y += vY * deltaTime;
 		for (ObjectHandler::Object * obj : objectList) {
 			if (obj == this) continue;
+			if (obj->isTrigger) continue; 
 			if (collision->colliding(obj->collision)) {
 				unintersectY(obj);
-				vY = 0;
+				if (obj->collision->y > collision->y) vY = hailMath::min(vY, 0);
+				else vY = 0;
+			}
+		}
+		// Handle collisions
+		for (ObjectHandler::Object * obj : objectList) {
+			if (obj == this) continue;
+			if (!obj->isTrigger) continue; 
+			if (collision->colliding(obj->collision)) {
+				InteractableObject * object = (InteractableObject*) obj; // We know it's an interactable object
+				object->handleInteraction(this);
 			}
 		}
 		updateLimbPos();
@@ -226,6 +243,15 @@ namespace GameObjects {
 		sOX /= 1.1;
 	}
 
+	void Player::setImage(int relevantImg, SDLwrapper::Image * setTo) {
+		switch (relevantImg) {
+			case 0: {
+				babyImg = setTo;
+				break;
+			}
+		}
+	}
+
 	void Player::draw(SDLwrapper::Window * window) {
 		flipMult = getFlipMult();
 		mX = -2.5;
@@ -308,6 +334,19 @@ namespace GameObjects {
 		window->drawImageEx(sprites[0], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 10, 15.0, flipped, false, angles[0] * flipMult);
 		cX += aX * 2;
 		cY += aY * 2;
+		if (hasBaby) {
+			mX = -3.5;
+			mY = 10;
+			tX = -8.5;
+			tY = -6.5;
+			bX = cos(angles[0] * (hailMath::pi / 180));
+			bY = sin(angles[0] * (hailMath::pi / 180));
+			aX = tX * bX - tY * bY;
+			aY = tX * bY + tY * bX;
+			window->drawImageEx(babyImg, collision->getMid_x() + mX + (aX + sOX) * flipMult, collision->getBound_t() + mY + (aY + sOY), 7, 13.0, flipped, false, angles[0] * flipMult);
+		}
+		mX = -5;
+		mY = 10;
 		tX = 0;
 		tY = -2;
 		aX = tX * bX - tY * bY;

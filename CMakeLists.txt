@@ -14,10 +14,12 @@ set(sourceFiles ${sourceFiles}
     hailLib/sdlWrapper.cpp
     hailLib/basemath.cpp
     main.cpp
-    loadLevel.cpp
     collider.cpp
     object.cpp
+    playerInteractableObjects.cpp
     player.cpp
+    crib.cpp
+    loadLevel.cpp
 )
 
 find_package(SDL2 REQUIRED)

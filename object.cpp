@@ -20,6 +20,7 @@ namespace ObjectHandler {
 		self = idGenerator(random);
 		objectList.push_back(this);
 		self_ptr = this;
+		isTrigger = false;
 	}
 
 	void Object::draw(SDLwrapper::Window * window) {} // Stub

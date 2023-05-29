@@ -9,6 +9,8 @@
 #include "hailLib/basemath.hpp"
 #include "collider.hpp"
 #include "object.hpp"
+#include "playerInteractableObjects.hpp"
+#include "crib.hpp"
 #include "player.hpp"
 #include "loadLevel.hpp"
 
@@ -18,7 +20,6 @@ std::chrono::high_resolution_clock::time_point startFrame, endFrame;
 std::chrono::duration<double> deltaTime;
 
 double deltaTimer = 0;
-double tTime = 0;
 double angle = 0;
 int loops;
 
@@ -33,7 +34,7 @@ SDLwrapper::Image * debugImage;
 
 int main() {
 	std::cout << "Physics timestep is " << PHYSICS_TIMESTEP << "s" << std::endl;
-	SDLwrapper::Window * window = new SDLwrapper::Window(640, 480, "Project Platformer");
+	SDLwrapper::Window * window = new SDLwrapper::Window(864, 480, "Project Platformer");
 	std::cout << "Loading Game Data..." << std::endl;
 	debugImage = new SDLwrapper::Image("assets/textures/debug.gif", window);
 	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Body.gif", window));
@@ -49,7 +50,7 @@ int main() {
 	std::cout << "Loaded Game Data!" << std::endl;
 	std::cout << "Creating Objects..." << std::endl;
 	std::string basePath = SDL_GetBasePath();
-	loadLevel(basePath + "assets/levels/debuglevel.lvl", &level, &enemies, &levelImages, debugImage, window);
+	loadLevel(basePath + "assets/levels/debuglevel.lvl", &level, &enemies, player, &levelImages, debugImage, window);
 	std::cout << "Created Objects!" << std::endl;
 	window->clearScreen(new SDLwrapper::Color(10, 200, 255, 255));
 	window->runInput();
@@ -63,11 +64,6 @@ int main() {
 		startFrame = endFrame;
 		std::cout << deltaTime.count() << "s" << std::endl;
 		deltaTimer += deltaTime.count();
-		tTime += deltaTime.count();
-		if (tTime > 1) {
-			loadLevel(basePath + "assets/levels/debuglevel.lvl", &level, &enemies, &levelImages, debugImage, window); // Memory Leak testing
-			tTime--;
-		}
 		loops = 0;
 		window->runInput();
 		std::cout << window->keysDown.size() << " keys pressed" << std::endl;
@@ -80,6 +76,9 @@ int main() {
 		while (deltaTimer > PHYSICS_TIMESTEP) {
 			deltaTimer -= PHYSICS_TIMESTEP;
 			player->step(PHYSICS_TIMESTEP);
+			for (ObjectHandler::Object * tile : level) {
+				tile->step(PHYSICS_TIMESTEP);
+			}
 			loops++;
 		}
 		std::cout << loops << " physics iterations this frame" << std::endl;

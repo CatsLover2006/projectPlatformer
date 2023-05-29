@@ -7,6 +7,7 @@ namespace ObjectHandler {
 		Object(CollisionHandler::Collider * collision);
 		virtual ~Object();
 		Object * self_ptr;
+		bool isTrigger;
 	protected:
 		static std::vector<Object*> objectList;
 		uint64_t self;

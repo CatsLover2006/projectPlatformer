@@ -9,7 +9,6 @@ namespace CollisionHandler {
 		virtual double getBound_b();
 		virtual double getBound_l();
 		virtual double getBound_r();
-		bool collides;
 		double getMid_y();
 		double getMid_x();
 		Collider(double x, double y);
