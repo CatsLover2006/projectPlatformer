@@ -44,7 +44,7 @@ namespace GameObjects {
 
 	void Crib::draw (SDLwrapper::Window * window) {
 		window->drawImage(getImageAtPos(0), collision->x, collision->y, 32, 32);
-		if (hasBaby) window->drawImageEx(getImageAtPos(1), collision->x + 13.5, collision->y + 10, 7, 13.0, 90 + babyAngle);
+		if (hasBaby) window->drawImageEx(getImageAtPos(1), collision->x + 13.5, collision->y + 10, 7, 13.0, babyAngle - 90);
 		window->drawImage(getImageAtPos(2), collision->x, collision->y, 32, 32);
 	}
 

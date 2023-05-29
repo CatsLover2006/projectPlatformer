@@ -190,7 +190,7 @@ namespace GameObjects {
 				break;
 			}
 			case 1: { // Running
-				progress = fmod(animProgress, .5);
+				progress = fmod(animProgress / 1.2, .5);
 				tSOY = hailMath::abs(fmod(progress + .125, .25)-.125) * 30 - 5;
 				tAngles[0] = 30;
 				tAngles[1] = -30;
@@ -202,8 +202,8 @@ namespace GameObjects {
 				tAngles[8] = -hailMath::abs(fmod(progress, .5)-.25) * 150 * 4 + 20;
 				tAngles[9] = 10 - 80 * cos(progress * hailMath::pi * 4);
 				tAngles[10] = 70 + 70 * sin(-progress * hailMath::pi * 4);
-				stepIn = angles[5] < 0 && sOY > -2.5 && angles[6] > angles[10];
-				stepOut = angles[9] < 0 && sOY > -2.5 && angles[6] < angles[10];
+				stepIn = progress > 0.15 && progress < 0.2;
+				stepOut = progress > 0.4 && progress < 0.45;
 				break;
 			}
 			case 0: // Standing

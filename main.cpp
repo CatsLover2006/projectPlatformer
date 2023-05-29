@@ -80,6 +80,7 @@ int main() {
 				tile->step(PHYSICS_TIMESTEP);
 			}
 			loops++;
+			//break;
 		}
 		std::cout << loops << " physics iterations this frame" << std::endl;
 		window->clearScreen(new SDLwrapper::Color(10, 200, 255, 255));
