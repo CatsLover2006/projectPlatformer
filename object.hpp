@@ -27,14 +27,24 @@ namespace ObjectHandler {
 	};
 	class GroundObject: public Object {
 	public:
-		long spr;
 		void draw(SDLwrapper::Window * window);
 		void step(double deltaTime);
 		GroundObject(CollisionHandler::Collider * collision, std::vector<SDLwrapper::Image *> * sprites, long positions[9], SDLwrapper::Image * debugImage);
-		~GroundObject();
 	private:
-		double animTmr;
 		long positions[9];
+		std::vector<SDLwrapper::Image *> * sprites;
+		SDLwrapper::Image * debugImage;
+		SDLwrapper::Image * getImageAtPos(long in);
+	};
+	class Slope: public Object {
+	public:
+		void draw(SDLwrapper::Window * window);
+		void step(double deltaTime);
+		Slope(double x, double y, double w, double dH, std::vector<SDLwrapper::Image *> * sprites, long positions[3], SDLwrapper::Image * debugImage);
+	private:
+		long spr;
+		long positions[3];
+		double dH;
 		std::vector<SDLwrapper::Image *> * sprites;
 		SDLwrapper::Image * debugImage;
 		SDLwrapper::Image * getImageAtPos(long in);

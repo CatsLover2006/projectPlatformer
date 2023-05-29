@@ -2,18 +2,7 @@
 #include "hailLib/basemath.hpp"
 #include <cmath>
 #include <typeinfo>
-
-double max (double a, double b) {
-	if (a>b) return a;
-	return b;
-}
-double min (double a, double b) {
-	if (a<b) return a;
-	return b;
-}
-double lerp(double a, double b, double t) {
-	return a*t + (1-t)*b;
-}
+#include <iostream>
 
 namespace CollisionHandler {
 	Collider::Collider() {
@@ -60,10 +49,10 @@ namespace CollisionHandler {
 	double BoxCollider::getBound_l() {return x;}
 	double BoxCollider::getBound_r() {return x+w;}
 
-	double RightTriCollider::getBound_t() {return min(y, y2);}
-	double RightTriCollider::getBound_b() {return max(y, y2);}
-	double RightTriCollider::getBound_l() {return min(x, x2);}
-	double RightTriCollider::getBound_r() {return max(x, x2);}
+	double RightTriCollider::getBound_t() {return hailMath::min<double>(y, y2);}
+	double RightTriCollider::getBound_b() {return hailMath::max<double>(y, y2);}
+	double RightTriCollider::getBound_l() {return hailMath::min<double>(x, x2);}
+	double RightTriCollider::getBound_r() {return hailMath::max<double>(x, x2);}
 
 	double Collider::getMid_y() {
 		return (this->getBound_t() + this->getBound_b()) / 2;
@@ -78,10 +67,10 @@ namespace CollisionHandler {
 	}
 
 	bool BoxCollider::colliding(Collider * other) {
-		if (typeid(other) == typeid(RightTriCollider)) return other->colliding(this);
+		if (dynamic_cast<RightTriCollider*>(other)) return other->colliding(this);
 		BoxCollider * otherBox = (BoxCollider*)other;
-		return ((hailMath::abs((x + w/2) - (otherBox->x + otherBox->w/2)) * 2 < (w + otherBox->w)) &&
-         		(hailMath::abs((y + h/2) - (otherBox->y + otherBox->h/2)) * 2 < (h + otherBox->h)));
+		return (getBound_l() <= otherBox->getBound_r()) && (getBound_r() >= otherBox->getBound_l()) &&
+			(getBound_b() >= otherBox->getBound_t()) && (getBound_t() <= otherBox->getBound_b());
 	}
 
 	bool Collider::pointInCollider(double x, double y) {
@@ -89,22 +78,24 @@ namespace CollisionHandler {
 	}
 
 	bool BoxCollider::pointInCollider(double x, double y) {
-		return (y > getBound_t() && y < getBound_b()) && (x > getBound_l() && x < getBound_r());
+		return (y >= getBound_t() && y <= getBound_b()) && (x >= getBound_l() && x <= getBound_r());
 	}
 
 	bool RightTriCollider::pointInCollider(double x, double y) {
-		if ((y > getBound_t() && y < getBound_b()) && (x > getBound_l() && x < getBound_r())) {
+		if ((x <= getBound_r()) && (x >= getBound_l()) && (y >= getBound_t()) && (y <= getBound_b())) {
+			double hi = hailMath::min<double>(this->x2, this->x)==this->x?this->y:this->y2;
+			double lo = hailMath::max<double>(this->x2, this->x)==this->x?this->y:this->y2;
 			if (useTopside) {
-				return (y > lerp(min(this->y2, this->y), max(this->y2, this->y), (x - this->x) / hailMath::abs(this->x - this->x2)));
+				return (y > hailMath::lerp<double>(lo, hi, (x - hailMath::min<double>(this->x2, this->x)) / hailMath::abs(this->x - this->x2)));
 			} else {
-				return (y < lerp(min(this->y2, this->y), max(this->y2, this->y), (x - this->x) / hailMath::abs(this->x - this->x2)));
+				return (y < hailMath::lerp<double>(lo, hi, (x - hailMath::min<double>(this->x2, this->x)) / hailMath::abs(this->x - this->x2)));
 			}
 		}
 		return false;
 	}
 
 	bool RightTriCollider::colliding(Collider * other) {
-		if (typeid(other) == typeid(RightTriCollider)) {
+		if (dynamic_cast<RightTriCollider*>(other)) {
 			RightTriCollider * otherTri = (RightTriCollider*)other;
 			if ((hailMath::abs((x + x2)/2 - (otherTri->x + otherTri->x2)/2) * 2 < (hailMath::abs(x2-x) + hailMath::abs(otherTri->x2-otherTri->x))) &&
 	         	(hailMath::abs((y + y2)/2 - (otherTri->y + otherTri->y2)/2) * 2 < (hailMath::abs(y2-y) + hailMath::abs(otherTri->y2-otherTri->y)))) {
@@ -112,29 +103,15 @@ namespace CollisionHandler {
 			}
 			return false;
 		}
-		BoxCollider * otherBox = (BoxCollider*)other;
-		if ((hailMath::abs((x + x2)/2 - (otherBox->x + otherBox->w/2)) * 2 < (hailMath::abs(x2-x) + otherBox->w)) &&
-         	(hailMath::abs((y + y2)/2 - (otherBox->y + otherBox->h/2)) * 2 < (hailMath::abs(y2-y) + otherBox->h))) {
-			double cX = otherBox->x;
-			double cY = otherBox->y;
-			if (useTopside) {
-				if (cY > lerp(min(this->y2, this->y), max(this->y2, this->y), (cX - this->x) / hailMath::abs(this->x - this->x2))) return true;
-				cX += otherBox->w;
-				if (cY > lerp(min(this->y2, this->y), max(this->y2, this->y), (cX - this->x) / hailMath::abs(this->x - this->x2))) return true;
-				cY += otherBox->h;
-				if (cY > lerp(min(this->y2, this->y), max(this->y2, this->y), (cX - this->x) / hailMath::abs(this->x - this->x2))) return true;
-				cX -= otherBox->w;
-				if (cY > lerp(min(this->y2, this->y), max(this->y2, this->y), (cX - this->x) / hailMath::abs(this->x - this->x2))) return true;
-			} else {
-				if (cY < lerp(min(this->y2, this->y), max(this->y2, this->y), (cX - this->x) / hailMath::abs(this->x - this->x2))) return true;
-				cX += otherBox->w;
-				if (cY < lerp(min(this->y2, this->y), max(this->y2, this->y), (cX - this->x) / hailMath::abs(this->x - this->x2))) return true;
-				cY += otherBox->h;
-				if (cY < lerp(min(this->y2, this->y), max(this->y2, this->y), (cX - this->x) / hailMath::abs(this->x - this->x2))) return true;
-				cX -= otherBox->w;
-				if (cY < lerp(min(this->y2, this->y), max(this->y2, this->y), (cX - this->x) / hailMath::abs(this->x - this->x2))) return true;
-			}
-		}
+		if(pointInCollider(other->getBound_l(), other->getBound_t())) return true;
+		if(pointInCollider(other->getBound_r(), other->getBound_t())) return true;
+		if(pointInCollider(other->getBound_l(), other->getBound_b())) return true;
+		if(pointInCollider(other->getBound_r(), other->getBound_b())) return true;
+		if(pointInCollider(other->getBound_l(), other->getMid_y())) return true;
+		if(pointInCollider(other->getBound_r(), other->getMid_y())) return true;
+		if(pointInCollider(other->getMid_x(), other->getBound_t())) return true;
+		if(pointInCollider(other->getMid_x(), other->getBound_b())) return true;
+		if(pointInCollider(other->getMid_x(), other->getMid_y())) return true;
 		return false;
 	}
 }

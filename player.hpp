@@ -19,5 +19,9 @@ namespace GameObjects {
 		bool checkAnimNoset();
 		void updateLimbPos();
 		SDLwrapper::Image * babyImg;
+		short coyote;
+		bool canWallJump;
+		short wallDir;
+		short wallCoyote;
 	};
 }

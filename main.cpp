@@ -29,8 +29,15 @@ GameObjects::Player * player;
 uint8_t inputState;
 std::vector<SDLwrapper::Image *> playerImages;
 
+double bounds[4];
+
+double camera_x, camera_y;
+
 std::vector<SDLwrapper::Image *> levelImages;
 SDLwrapper::Image * debugImage;
+
+std::string curLvl;
+std::string basePath;
 
 int main() {
 	std::cout << "Physics timestep is " << PHYSICS_TIMESTEP << "s" << std::endl;
@@ -49,8 +56,11 @@ int main() {
 	player = new GameObjects::Player(200, -10, playerImages);
 	std::cout << "Loaded Game Data!" << std::endl;
 	std::cout << "Creating Objects..." << std::endl;
-	std::string basePath = SDL_GetBasePath();
-	loadLevel(basePath + "assets/levels/debuglevel.lvl", &level, &enemies, player, &levelImages, debugImage, window);
+	basePath = SDL_GetBasePath();
+	curLvl = basePath + "assets/levels/debuglevel.lvl";
+	loadLevel(curLvl, &level, &enemies, player, &levelImages, debugImage, window, bounds);
+	camera_x = 0;
+	camera_y = 0;
 	std::cout << "Created Objects!" << std::endl;
 	window->clearScreen(new SDLwrapper::Color(10, 200, 255, 255));
 	window->runInput();
@@ -79,11 +89,20 @@ int main() {
 			for (ObjectHandler::Object * tile : level) {
 				tile->step(PHYSICS_TIMESTEP);
 			}
+			camera_x += (player->collision->x - 432) * 0.1;
+			camera_x /= 1.1;
+			camera_x = hailMath::constrain<double>(camera_x, bounds[0], bounds[2] - 864);
+			camera_y += (player->collision->y - 352) * 0.1;
+			camera_y /= 1.1;
+			camera_y = hailMath::constrain<double>(camera_y, bounds[1], bounds[3] - 480);
+			if (player->collision->y > bounds[3]) loadLevel(curLvl, &level, &enemies, player, &levelImages, debugImage, window, bounds); // Reset
 			loops++;
 			//break;
 		}
 		std::cout << loops << " physics iterations this frame" << std::endl;
 		window->clearScreen(new SDLwrapper::Color(10, 200, 255, 255));
+		window->resetTranslation();
+		window->translate(-camera_x, -camera_y);
 		for (ObjectHandler::Object * tile : level) {
 			tile->draw(window);
 		}

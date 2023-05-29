@@ -21,7 +21,7 @@ using namespace CollisionHandler;
 using namespace GameObjects;
 
 void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* levelData, std::vector<ObjectHandler::DynamicObject *>* enemyData,
-		GameObjects::Player * player, std::vector<SDLwrapper::Image *>* images, SDLwrapper::Image * debugImg, SDLwrapper::Window * window) {
+		GameObjects::Player * player, std::vector<SDLwrapper::Image *>* images, SDLwrapper::Image * debugImg, SDLwrapper::Window * window, double bounds[4]) {
 	if (levelFile.is_open()) levelFile.close();
 	levelFile.open(filename, std::ifstream::in);
 	if (!levelFile.is_open()) {
@@ -42,6 +42,14 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 		}
 	}
 	levelData->clear();
+	for (DynamicObject * obj : *enemyData) {
+		if (obj != nullptr) {
+			delete obj;
+			obj = nullptr;
+		}
+	}
+	enemyData->clear();
+	player->hasBaby = false;
 	std::getline(levelFile, curLine);
 	while (curLine != "") {
 		curData = curLine.substr(0, curLine.find(delim));
@@ -57,7 +65,7 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 			curLine.erase(0, curLine.find(delim) + delim.length());
 			lineData.push_back(std::stod(curData));
 		}
-		std::cout << lineData[0] << std::endl;
+		std::cout << "Loading Object ID: " << lineData[0] << std::endl;
 		switch (lineData[0]) {
 			case 0: {
 				player->collision->x = lineData[1] + 4;
@@ -81,11 +89,38 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 				delete[] data;
 				break;
 			}
+			case 3: {
+				long *data = new long[3];
+				for (int i = 0; i < 3; i++) data[i] = lineData[i + 5];
+				levelData->push_back(new Slope(lineData[1],lineData[2],lineData[3],lineData[4], images, data, debugImg));
+				delete[] data;
+				break;
+			}
 			default: break;
 		}
 	}
 	lineData.clear();
 	lineData.push_back(0);
-	lineData.shrink_to_fit();
+	while (lineData[0] != -1) {
+		lineData.clear();
+		std::getline(levelFile, curLine);
+		while (curLine != "") {
+			curData = curLine.substr(0, curLine.find(delim));
+			curLine.erase(0, curLine.find(delim) + delim.length());
+			lineData.push_back(std::stod(curData));
+		}
+		std::cout << "Loading Dynamic Object ID: " << lineData[0] << std::endl;
+		switch (lineData[0]) {
+			default: break;
+		}
+	}
+	lineData.clear();
+	std::getline(levelFile, curLine);
+	while (curLine != "") {
+		curData = curLine.substr(0, curLine.find(delim));
+		curLine.erase(0, curLine.find(delim) + delim.length());
+		lineData.push_back(std::stod(curData));
+	}
+	for (int i = 0; i < 4; i++) bounds[i] = lineData[i];
 	levelFile.close();
 }

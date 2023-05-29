@@ -31,9 +31,6 @@ namespace ObjectHandler {
 
 	void DynamicObject::step(double deltaTime) {} // Stub
 
-	GroundObject::~GroundObject() { // Stub 4 now
-	}
-
 	DynamicObject::~DynamicObject() {
 		for (SDLwrapper::Image * img : sprites) {
 			if (img != nullptr) {
@@ -61,11 +58,27 @@ namespace ObjectHandler {
 		this->debugImage = debugImage;
 	}
 
+	Slope::Slope(double x, double y, double w, double dH, std::vector<SDLwrapper::Image *> * sprites, long positions[3], SDLwrapper::Image * debugImage): Object(new CollisionHandler::RightTriCollider(x, y, x + w, y + dH, true)) {
+		this->sprites = sprites;
+		for (int i = 0; i < 3; i++) this->positions[i] = positions[i];
+		this->debugImage = debugImage;
+		this->dH = dH;
+	}
+
 	void GroundObject::step(double deltaTime) {
 		// Nada
 	}
 
+	void Slope::step(double deltaTime) {
+		// Nada
+	}
+
 	SDLwrapper::Image * GroundObject::getImageAtPos(long in) {
+		if (in == -1) return debugImage;
+		else return sprites->at(in);
+	}
+
+	SDLwrapper::Image * Slope::getImageAtPos(long in) {
 		if (in == -1) return debugImage;
 		else return sprites->at(in);
 	}
@@ -76,7 +89,7 @@ namespace ObjectHandler {
 				window->drawImage(getImageAtPos(positions[4]), x, y);
 		for (double x = collision->getBound_l() + getImageAtPos(positions[0])->w; x < collision->getBound_r() - getImageAtPos(positions[2])->w; x += getImageAtPos(positions[1])->w) {
 			window->drawImage(getImageAtPos(positions[1]), x, collision->getBound_t());
-			window->drawImage(getImageAtPos(positions[6]), x, collision->getBound_b() - getImageAtPos(positions[6])->h);
+			window->drawImage(getImageAtPos(positions[7]), x, collision->getBound_b() - getImageAtPos(positions[7])->h);
 		}
 		for (double y = collision->getBound_t() + getImageAtPos(positions[0])->h; y < collision->getBound_b() - getImageAtPos(positions[5])->w; y += getImageAtPos(positions[3])->h) {
 			window->drawImage(getImageAtPos(positions[3]), collision->getBound_l(), y);
@@ -88,12 +101,35 @@ namespace ObjectHandler {
 		window->drawImage(getImageAtPos(positions[8]), collision->getBound_r() - getImageAtPos(positions[8])->w, collision->getBound_b() - getImageAtPos(positions[8])->h);
 	}
 
+	void Slope::draw(SDLwrapper::Window * window) {
+		double t = collision->getBound_l();
+		double y;
+		if (dH < 0) y = collision->getBound_b() - getImageAtPos(positions[0])->h;
+		else y = collision->getBound_t();
+		double k, p;
+		while (t < collision->getBound_r()) {
+			window->drawImage(getImageAtPos(positions[0]), t, y);
+			window->drawImage(getImageAtPos(positions[1]), t, y + getImageAtPos(positions[0])->h);
+			k = y + getImageAtPos(positions[0])->h + getImageAtPos(positions[1])->h;
+			while (k < collision->getBound_b()) {
+				for (p = 0; p < getImageAtPos(positions[0])->w; p += getImageAtPos(positions[2])->w) {
+					window->drawImage(getImageAtPos(positions[2]), p + t, k);
+				}
+				k += getImageAtPos(positions[2])->h;
+			}
+			if (dH < 0) y -= getImageAtPos(positions[0])->h;
+			else y += getImageAtPos(positions[0])->h;
+			t += getImageAtPos(positions[0])->w;
+		}
+	}
+
 	void DynamicObject::unintersectY(Object * other) {
 		double accuracy = 1;
 		while (accuracy > 0.000000001) {
 			while (collision->colliding(other->collision)) {
 				if (typeid(other) == typeid(DynamicObject)) {
-					if (collision->getMid_y() > other->collision->getMid_y()) {
+					DynamicObject * otherD = (DynamicObject *) other;
+					if (vY < otherD->vY) {
 						collision->y += accuracy;
 						other->collision->y -= accuracy;
 					} else {
@@ -101,7 +137,7 @@ namespace ObjectHandler {
 						other->collision->y += accuracy;
 					}
 				} else {
-					if (collision->getMid_y() > other->collision->getMid_y())
+					if (vY < 0)
 						collision->y += accuracy;
 					else
 						collision->y -= accuracy;
@@ -110,7 +146,8 @@ namespace ObjectHandler {
 			accuracy/=10;
 			while (!collision->colliding(other->collision)) {
 				if (typeid(other) == typeid(DynamicObject)) {
-					if (collision->getMid_y() > other->collision->getMid_y()) {
+					DynamicObject * otherD = (DynamicObject *) other;
+					if (vY < otherD->vY) {
 						collision->y -= accuracy;
 						other->collision->y += accuracy;
 					} else {
@@ -118,7 +155,7 @@ namespace ObjectHandler {
 						other->collision->y -= accuracy;
 					}
 				} else {
-					if (collision->getMid_y() > other->collision->getMid_y())
+					if (vY < 0)
 						collision->y -= accuracy;
 					else
 						collision->y += accuracy;
@@ -128,7 +165,8 @@ namespace ObjectHandler {
 		}
 		while (collision->colliding(other->collision)) {
 			if (typeid(other) == typeid(DynamicObject)) {
-				if (collision->getMid_y() > other->collision->getMid_y()) {
+				DynamicObject * otherD = (DynamicObject *) other;
+				if (vY < otherD->vY) {
 					collision->y += accuracy;
 					other->collision->y -= accuracy;
 				} else {
@@ -136,7 +174,7 @@ namespace ObjectHandler {
 					other->collision->y += accuracy;
 				}
 			} else {
-				if (collision->getMid_y() > other->collision->getMid_y())
+				if (vY < 0)
 					collision->y += accuracy;
 				else
 					collision->y -= accuracy;

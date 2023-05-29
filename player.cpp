@@ -22,8 +22,12 @@ int flipMult;
 double tX, tY, cX, cY, aX, aY, bX, bY, mX, mY;
 bool stepIn, stepOut;
 bool dontReset;
+bool overLoad;
+bool canJump;
 
 namespace GameObjects {
+	bool hadJumped;
+	bool hadPressed;
 	bool Player::checkAnimNoset() {
 		if (anim == 3) return true;
 		return false;
@@ -55,6 +59,7 @@ namespace GameObjects {
 		animProgress += deltaTime;
 		vY += grav * deltaTime;
 		if (!checkAnimNoset()) anim = 0;
+		if (!hadPressed) hadJumped = false;
 		bool t_disabled = false;
 		if (inputState & 0b00001000) {
 			if (vX < PLAYER_SPEED) vX += deltaTime * PLAYER_ACCEL;
@@ -76,15 +81,38 @@ namespace GameObjects {
 			if (vX > 0) anim = 4;
 		} else if (vX < 0) vX += deltaTime * PLAYER_FRICTION;
 		pastLeft:
-		if (checkCanJump()) {
+		canJump = checkCanJump();
+		if (canJump) coyote = 14;
+		else if (coyote) coyote--;
+		hadPressed = inputState & 0b00000001;
+		if (coyote) {
+			canWallJump = true;
 			if (inputState & 0b00000001) {
+				if (hadPressed && hadJumped) goto skipJump;
+				hadJumped = true;
 				vY = -JUMP_HEIGHT;
 				anim = 3;
-			}
-		} else if (vY <= 0 && anim == 3) anim = 3;
+			} else if (anim == 3) anim = 0;
+		} else if (vY < 0 && anim == 3) anim = 3;
 		else anim = 2;
-		if (hailMath::abs(vX) < 20 && !t_disabled) vX = 0; // 20 pixels per second is nothing
+		skipJump:
+		if (hailMath::abs_q(vX) < 20 && !t_disabled) vX = 0; // 20 pixels per second is nothing
 		collision->y -= 4;
+		dontReset = false;
+		tX = vY;
+		vY = -4;
+		for (ObjectHandler::Object * obj : objectList) {
+			if (obj == this) continue;
+			if (obj->isTrigger) continue;
+			if (collision->colliding(obj->collision)) {
+				unintersectY(obj);
+				dontReset = true;
+			}
+		}
+		if (dontReset) {
+			vY = 0;
+			collision->y += 4;
+		} else vY = tX;
 		collision->x += vX * deltaTime;
 		dontReset = false;
 		for (ObjectHandler::Object * obj : objectList) {
@@ -92,21 +120,41 @@ namespace GameObjects {
 			if (obj->isTrigger) continue;
 			if (collision->colliding(obj->collision)) {
 				unintersectX(obj);
-				vX = 0;
+				dontReset = true;
 			}
 		}
-		collision->y += 4;
-		collision->y += vY * deltaTime;
-		for (ObjectHandler::Object * obj : objectList) {
-			if (obj == this) continue;
-			if (obj->isTrigger) continue; 
-			if (collision->colliding(obj->collision)) {
-				unintersectY(obj);
-				if (obj->collision->y > collision->y) vY = hailMath::min(vY, 0);
+		if (dontReset) {
+			if (canWallJump && !hasBaby && !canJump) anim = 5;
+			wallCoyote = 30;
+			wallDir = (vX/hailMath::abs_q(vX));
+			vX = 0;
+		} else if (wallCoyote) wallCoyote--;
+		if (!hasBaby && wallCoyote && canWallJump && !(hadPressed && hadJumped) && inputState & 0b00000001) {
+			vY = -JUMP_HEIGHT;
+			vX = wallDir * -PLAYER_SPEED;
+			anim = 3;
+			canWallJump = false;
+		}
+		collision->y += vY * deltaTime + 4;
+		if (vY > 0) {
+			overLoad = false;
+			dontReset = false;
+			for (ObjectHandler::Object * obj : objectList) {
+				if (obj == this) continue;
+				if (obj->isTrigger) continue; 
+				if (collision->colliding(obj->collision)) {
+					unintersectY(obj);
+					dontReset = true;
+					if (obj->collision->y > collision->y) overLoad = true;
+				}
+			}
+			if (dontReset) {
+				if (overLoad) vY = hailMath::min<double>(vY, 0);
 				else vY = 0;
 			}
 		}
-		// Handle collisions
+	triggerCheck:
+		// Handle triggers
 		for (ObjectHandler::Object * obj : objectList) {
 			if (obj == this) continue;
 			if (!obj->isTrigger) continue; 
@@ -172,10 +220,27 @@ namespace GameObjects {
 				animProgress = 0;
 				break;
 			}
+			case 5: { // Airfall-slide
+				tSOY = 0;
+				tAngles[0] = 4;
+				tAngles[1] = -40;
+				tAngles[3] = -84;
+				tAngles[4] = -100;
+				tAngles[5] = -acos(14.0/15)*(180/hailMath::pi);
+				tAngles[6] = 0;
+				tAngles[7] = 90;
+				tAngles[8] = -10;
+				tAngles[9] = -acos(10.0/15)*(180/hailMath::pi);
+				tAngles[10] = 0;
+				stepIn = false;
+				stepOut = false;
+				animProgress = 0.25;
+				break;
+			}
 			case 2: { // Airfall
 				tSOY = 0;
 				tAngles[0] = 4;
-				tAngles[1] = hailMath::constrain(vY / 5, -40, 40);
+				tAngles[1] = hailMath::constrain<double>(vY / 5, -40, 40);
 				tAngles[3] = 70;
 				tAngles[4] = -10;
 				tAngles[5] = -acos(14.0/15)*(180/hailMath::pi);
@@ -191,15 +256,15 @@ namespace GameObjects {
 			}
 			case 1: { // Running
 				progress = fmod(animProgress / 1.2, .5);
-				tSOY = hailMath::abs(fmod(progress + .125, .25)-.125) * 30 - 5;
+				tSOY = hailMath::abs_q(fmod(progress + .125, .25)-.125) * 30 - 5;
 				tAngles[0] = 30;
 				tAngles[1] = -30;
-				tAngles[3] = -tAngles[0] - hailMath::abs(fmod(progress + .25, .5)-.25) * 100 * 4 + 60;
-				tAngles[4] = -hailMath::abs(fmod(progress + .25, .5)-.25) * 150 * 4 + 20;
+				tAngles[3] = -tAngles[0] - hailMath::abs_q(fmod(progress + .25, .5)-.25) * 100 * 4 + 60;
+				tAngles[4] = -hailMath::abs_q(fmod(progress + .25, .5)-.25) * 150 * 4 + 20;
 				tAngles[5] = 80 * cos(progress * hailMath::pi * 4) + 10;
 				tAngles[6] = 70 + 70 * sin(progress * hailMath::pi * 4);
-				tAngles[7] = -tAngles[0] + hailMath::abs(fmod(.75 - progress, .5)-.25) * 100 * 4 - 40;
-				tAngles[8] = -hailMath::abs(fmod(progress, .5)-.25) * 150 * 4 + 20;
+				tAngles[7] = -tAngles[0] + hailMath::abs_q(fmod(.75 - progress, .5)-.25) * 100 * 4 - 40;
+				tAngles[8] = -hailMath::abs_q(fmod(progress, .5)-.25) * 150 * 4 + 20;
 				tAngles[9] = 10 - 80 * cos(progress * hailMath::pi * 4);
 				tAngles[10] = 70 + 70 * sin(-progress * hailMath::pi * 4);
 				stepIn = progress > 0.15 && progress < 0.2;
