@@ -20,8 +20,9 @@ namespace GameObjects {
 		void updateLimbPos();
 		SDLwrapper::Image * babyImg;
 		short coyote;
-		bool canWallJump;
 		short wallDir;
 		short wallCoyote;
+		double wallTmr;
+		bool onWall;
 	};
 }

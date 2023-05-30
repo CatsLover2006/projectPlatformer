@@ -86,9 +86,9 @@ namespace CollisionHandler {
 			double hi = hailMath::min<double>(this->x2, this->x)==this->x?this->y:this->y2;
 			double lo = hailMath::max<double>(this->x2, this->x)==this->x?this->y:this->y2;
 			if (useTopside) {
-				return (y > hailMath::lerp<double>(lo, hi, (x - hailMath::min<double>(this->x2, this->x)) / hailMath::abs(this->x - this->x2)));
+				return (y >= hailMath::lerp<double>(lo, hi, (x - hailMath::min<double>(this->x2, this->x)) / hailMath::abs(this->x - this->x2)));
 			} else {
-				return (y < hailMath::lerp<double>(lo, hi, (x - hailMath::min<double>(this->x2, this->x)) / hailMath::abs(this->x - this->x2)));
+				return (y <= hailMath::lerp<double>(lo, hi, (x - hailMath::min<double>(this->x2, this->x)) / hailMath::abs(this->x - this->x2)));
 			}
 		}
 		return false;

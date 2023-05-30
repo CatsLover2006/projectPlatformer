@@ -13,12 +13,14 @@
 std::ifstream levelFile;
 std::string curLine;
 std::string curData;
-std::vector<long> lineData = {0};
+std::vector<double> lineData = {0};
 const std::string delim = "|";
 
 using namespace ObjectHandler;
 using namespace CollisionHandler;
 using namespace GameObjects;
+
+SDLwrapper::Image * emptyImg;
 
 void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* levelData, std::vector<ObjectHandler::DynamicObject *>* enemyData,
 		GameObjects::Player * player, std::vector<SDLwrapper::Image *>* images, SDLwrapper::Image * debugImg, SDLwrapper::Window * window, double bounds[4]) {
@@ -51,6 +53,9 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 	enemyData->clear();
 	player->hasBaby = false;
 	std::getline(levelFile, curLine);
+	delete emptyImg;
+	emptyImg = new SDLwrapper::Image(curLine, window);
+	std::getline(levelFile, curLine);
 	while (curLine != "") {
 		curData = curLine.substr(0, curLine.find(delim));
 		curLine.erase(0, curLine.find(delim) + delim.length());
@@ -66,9 +71,9 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 			lineData.push_back(std::stod(curData));
 		}
 		std::cout << "Loading Object ID: " << lineData[0] << std::endl;
-		switch (lineData[0]) {
+		switch ((long)lineData[0]) {
 			case 0: {
-				player->collision->x = lineData[1] + 4;
+				player->collision->x = lineData[1] + 8;
 				player->collision->y = lineData[2];
 				player->vX = 0;
 				player->vY = 0;
@@ -92,8 +97,13 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 			case 3: {
 				long *data = new long[3];
 				for (int i = 0; i < 3; i++) data[i] = lineData[i + 5];
-				levelData->push_back(new Slope(lineData[1],lineData[2],lineData[3],lineData[4], images, data, debugImg));
+				long *vEndData = new long[9];
+				for (int i = 0; i < 9; i++) vEndData[i] = -1;
+				levelData->push_back(new GroundObject(new BoxCollider(lineData[1],hailMath::max<double>(lineData[2], lineData[2]+lineData[4]),lineData[3], 0), images, vEndData, emptyImg)); // Bug fix: phasing through corners
+				levelData->push_back(new GroundObject(new BoxCollider((lineData[4]<0)?lineData[1]+lineData[3]:lineData[1],hailMath::min<double>(lineData[2], lineData[2]+lineData[4]),0, hailMath::abs_q((double)lineData[4])), images, vEndData, emptyImg));
+				levelData->push_back(new Slope(lineData[1],lineData[2],lineData[3],lineData[4], images, data, debugImg)); // Bug fix: clipping through slopes vertically
 				delete[] data;
+				delete[] vEndData;
 				break;
 			}
 			default: break;
@@ -110,7 +120,7 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 			lineData.push_back(std::stod(curData));
 		}
 		std::cout << "Loading Dynamic Object ID: " << lineData[0] << std::endl;
-		switch (lineData[0]) {
+		switch ((long)lineData[0]) {
 			default: break;
 		}
 	}

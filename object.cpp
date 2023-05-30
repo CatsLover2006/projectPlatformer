@@ -84,6 +84,7 @@ namespace ObjectHandler {
 	}
 
 	void GroundObject::draw(SDLwrapper::Window * window) {
+		if (collision->getMid_x() == collision->x || collision->getMid_y() == collision->y) return;
 		for (double x = collision->getBound_l() + getImageAtPos(positions[0])->w; x < collision->getBound_r() - getImageAtPos(positions[2])->w; x += getImageAtPos(positions[4])->w)
 			for (double y = collision->getBound_t() + getImageAtPos(positions[0])->h; y < collision->getBound_b() - getImageAtPos(positions[6])->w; y += getImageAtPos(positions[4])->h)
 				window->drawImage(getImageAtPos(positions[4]), x, y);
@@ -109,7 +110,7 @@ namespace ObjectHandler {
 		double k, p;
 		while (t < collision->getBound_r()) {
 			window->drawImage(getImageAtPos(positions[0]), t, y);
-			window->drawImage(getImageAtPos(positions[1]), t, y + getImageAtPos(positions[0])->h);
+			if (y + getImageAtPos(positions[0])->h < collision->getBound_b()) window->drawImage(getImageAtPos(positions[1]), t, y + getImageAtPos(positions[0])->h);
 			k = y + getImageAtPos(positions[0])->h + getImageAtPos(positions[1])->h;
 			while (k < collision->getBound_b()) {
 				for (p = 0; p < getImageAtPos(positions[0])->w; p += getImageAtPos(positions[2])->w) {
@@ -124,11 +125,11 @@ namespace ObjectHandler {
 	}
 
 	void DynamicObject::unintersectY(Object * other) {
+		DynamicObject * otherD = dynamic_cast<DynamicObject*>(other);
 		double accuracy = 1;
 		while (accuracy > 0.000000001) {
 			while (collision->colliding(other->collision)) {
-				if (typeid(other) == typeid(DynamicObject)) {
-					DynamicObject * otherD = (DynamicObject *) other;
+				if (otherD) {
 					if (vY < otherD->vY) {
 						collision->y += accuracy;
 						other->collision->y -= accuracy;
@@ -145,8 +146,7 @@ namespace ObjectHandler {
 			}
 			accuracy/=10;
 			while (!collision->colliding(other->collision)) {
-				if (typeid(other) == typeid(DynamicObject)) {
-					DynamicObject * otherD = (DynamicObject *) other;
+				if (otherD) {
 					if (vY < otherD->vY) {
 						collision->y -= accuracy;
 						other->collision->y += accuracy;
@@ -164,7 +164,7 @@ namespace ObjectHandler {
 			accuracy/=10;
 		}
 		while (collision->colliding(other->collision)) {
-			if (typeid(other) == typeid(DynamicObject)) {
+			if (otherD) {
 				DynamicObject * otherD = (DynamicObject *) other;
 				if (vY < otherD->vY) {
 					collision->y += accuracy;
@@ -183,11 +183,12 @@ namespace ObjectHandler {
 	}
 
 	void DynamicObject::unintersectX(Object * other) {
+		DynamicObject * otherD = dynamic_cast<DynamicObject*>(other);
 		double accuracy = 1;
 		while (accuracy > 0.000000001) {
 			while (collision->colliding(other->collision)) {
-				if (typeid(other) == typeid(DynamicObject)) {
-					if (collision->getMid_x() > other->collision->getMid_x()) {
+				if (otherD) {
+					if (vX < otherD->vX) {
 						collision->x += accuracy;
 						other->collision->x -= accuracy;
 					} else {
@@ -195,7 +196,7 @@ namespace ObjectHandler {
 						other->collision->x += accuracy;
 					}
 				} else {
-					if (collision->getMid_x() > other->collision->getMid_x())
+					if (vX < 0)
 						collision->x += accuracy;
 					else
 						collision->x -= accuracy;
@@ -203,8 +204,8 @@ namespace ObjectHandler {
 			}
 			accuracy/=10;
 			while (!collision->colliding(other->collision)) {
-				if (typeid(other) == typeid(DynamicObject)) {
-					if (collision->getMid_x() > other->collision->getMid_x()) {
+				if (otherD) {
+					if (vX < otherD->vX) {
 						collision->x -= accuracy;
 						other->collision->x += accuracy;
 					} else {
@@ -212,7 +213,7 @@ namespace ObjectHandler {
 						other->collision->x -= accuracy;
 					}
 				} else {
-					if (collision->getMid_x() > other->collision->getMid_x())
+					if (vX < 0)
 						collision->x -= accuracy;
 					else
 						collision->x += accuracy;
@@ -221,8 +222,8 @@ namespace ObjectHandler {
 			accuracy/=10;
 		}
 		while (collision->colliding(other->collision)) {
-			if (typeid(other) == typeid(DynamicObject)) {
-				if (collision->getMid_x() > other->collision->getMid_x()) {
+			if (otherD) {
+				if (vX < otherD->vX) {
 					collision->x += accuracy;
 					other->collision->x -= accuracy;
 				} else {
@@ -230,7 +231,7 @@ namespace ObjectHandler {
 					other->collision->x += accuracy;
 				}
 			} else {
-				if (collision->getMid_x() > other->collision->getMid_x())
+				if (vX < 0)
 					collision->x += accuracy;
 				else
 					collision->x -= accuracy;

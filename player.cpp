@@ -33,7 +33,7 @@ namespace GameObjects {
 		return false;
 	}
 
-	Player::Player (double x, double y, std::vector<SDLwrapper::Image *> sprites): ObjectHandler::DynamicObject(new CollisionHandler::BoxCollider(x, y, 24, 32), GRAVITY, sprites) {
+	Player::Player (double x, double y, std::vector<SDLwrapper::Image *> sprites): ObjectHandler::DynamicObject(new CollisionHandler::BoxCollider(x, y, 16, 32), GRAVITY, sprites) {
 		//hasBaby = true;
 	}
 
@@ -56,43 +56,46 @@ namespace GameObjects {
 	}
 
 	void Player::step(double deltaTime) {
+		if (wallTmr < 1) {
+			wallTmr += deltaTime * 0.6;
+		} else wallTmr = 1;
 		animProgress += deltaTime;
 		vY += grav * deltaTime;
 		if (!checkAnimNoset()) anim = 0;
 		if (!hadPressed) hadJumped = false;
+		canJump = checkCanJump();
+		if (canJump) wallTmr = 1;
 		bool t_disabled = false;
 		if (inputState & 0b00001000) {
-			if (vX < PLAYER_SPEED) vX += deltaTime * PLAYER_ACCEL;
+			if (vX < PLAYER_SPEED) vX += deltaTime * PLAYER_ACCEL * wallTmr;
 			else vX = PLAYER_SPEED;
 			t_disabled = true;
 			flipped = false;
 			if (checkAnimNoset()) goto pastRight;
 			anim = 1;
 			if (vX < 0) anim = 4;
-		} else if (vX > 0) vX -= deltaTime * PLAYER_FRICTION;
+		} else if (vX > 0) vX -= deltaTime * PLAYER_FRICTION * wallTmr;
 		pastRight:
 		if (inputState & 0b00000100) {
-			if (vX > -PLAYER_SPEED) vX -= deltaTime * PLAYER_ACCEL;
+			if (vX > -PLAYER_SPEED) vX -= deltaTime * PLAYER_ACCEL * wallTmr;
 			else vX = -PLAYER_SPEED;
 			t_disabled = true;
 			flipped = true;
 			if (checkAnimNoset()) goto pastLeft;
 			anim = 1;
 			if (vX > 0) anim = 4;
-		} else if (vX < 0) vX += deltaTime * PLAYER_FRICTION;
+		} else if (vX < 0) vX += deltaTime * PLAYER_FRICTION * wallTmr;
 		pastLeft:
-		canJump = checkCanJump();
 		if (canJump) coyote = 14;
 		else if (coyote) coyote--;
 		hadPressed = inputState & 0b00000001;
 		if (coyote) {
-			canWallJump = true;
 			if (inputState & 0b00000001) {
 				if (hadPressed && hadJumped) goto skipJump;
 				hadJumped = true;
 				vY = -JUMP_HEIGHT;
 				anim = 3;
-			} else if (anim == 3) anim = 0;
+			} else if (anim == 3 && vY > -300) anim = 0;
 		} else if (vY < 0 && anim == 3) anim = 3;
 		else anim = 2;
 		skipJump:
@@ -115,25 +118,27 @@ namespace GameObjects {
 		} else vY = tX;
 		collision->x += vX * deltaTime;
 		dontReset = false;
+		onWall = false;
 		for (ObjectHandler::Object * obj : objectList) {
 			if (obj == this) continue;
 			if (obj->isTrigger) continue;
 			if (collision->colliding(obj->collision)) {
 				unintersectX(obj);
 				dontReset = true;
+				onWall = true;
 			}
 		}
 		if (dontReset) {
-			if (canWallJump && !hasBaby && !canJump) anim = 5;
+			if (!hasBaby && !canJump) anim = 5;
 			wallCoyote = 30;
 			wallDir = (vX/hailMath::abs_q(vX));
-			vX = 0;
+			vX /= std::pow(2, deltaTime);
 		} else if (wallCoyote) wallCoyote--;
-		if (!hasBaby && wallCoyote && canWallJump && !(hadPressed && hadJumped) && inputState & 0b00000001) {
+		if (!hasBaby && wallCoyote && !(hadPressed && hadJumped) && inputState & 0b00000001) {
 			vY = -JUMP_HEIGHT;
-			vX = wallDir * -PLAYER_SPEED;
+			vX = wallDir * -PLAYER_SPEED * 0.9;
 			anim = 3;
-			canWallJump = false;
+			wallTmr = 0.02;
 		}
 		collision->y += vY * deltaTime + 4;
 		if (vY > 0) {
