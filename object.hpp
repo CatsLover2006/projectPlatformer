@@ -5,7 +5,7 @@ namespace ObjectHandler {
 		virtual void draw(SDLwrapper::Window * window);
 		virtual void step(double deltaTime);
 		Object(CollisionHandler::Collider * collision);
-		virtual ~Object();
+		void del();
 		Object * self_ptr;
 		bool isTrigger;
 	protected:
@@ -20,10 +20,14 @@ namespace ObjectHandler {
 		virtual void draw(SDLwrapper::Window * window);
 		virtual void step(double deltaTime);
 		~DynamicObject();
+		DynamicObject(CollisionHandler::Collider * collision, double grav);
 		DynamicObject(CollisionHandler::Collider * collision, double grav, std::vector<SDLwrapper::Image *> sprites);
+		void preStep(double deltaTime);
 	protected:
 		double grav;
 		std::vector<SDLwrapper::Image *> sprites;
+		bool unintersecting;
+		double oX, oY, deltaT;
 	};
 	class GroundObject: public Object {
 	public:

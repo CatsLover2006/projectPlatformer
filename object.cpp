@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "collider.hpp"
 #include "hailLib/sdlWrapper.hpp"
+#include "hailLib/basemath.hpp"
 #include "object.hpp"
 
 namespace ObjectHandler {
@@ -31,6 +32,12 @@ namespace ObjectHandler {
 
 	void DynamicObject::step(double deltaTime) {} // Stub
 
+	void Object::del() {
+		delete collision;
+		objectList.erase(std::remove(objectList.begin(), objectList.end(), self_ptr), objectList.end());
+		delete this;
+	}
+
 	DynamicObject::~DynamicObject() {
 		for (SDLwrapper::Image * img : sprites) {
 			if (img != nullptr) {
@@ -41,15 +48,17 @@ namespace ObjectHandler {
 		sprites.clear();
 	}
 
-	Object::~Object() {
-		delete collision;
-		objectList.erase(std::remove(objectList.begin(), objectList.end(), self_ptr), objectList.end());
-		objectList.shrink_to_fit();
+	DynamicObject::DynamicObject (CollisionHandler::Collider * collision, double grav): Object(collision) {
+		this->grav = grav;
+		vX = 0;
+		vY = 0;
 	}
 
 	DynamicObject::DynamicObject (CollisionHandler::Collider * collision, double grav, std::vector<SDLwrapper::Image *> sprites): Object(collision) {
 		this->grav = grav;
 		this->sprites = sprites;
+		vX = 0;
+		vY = 0;
 	}
 
 	GroundObject::GroundObject(CollisionHandler::Collider * collision, std::vector<SDLwrapper::Image *> * sprites, long positions[9], SDLwrapper::Image * debugImage): Object(collision) {
@@ -110,85 +119,62 @@ namespace ObjectHandler {
 		double k, p;
 		while (t < collision->getBound_r()) {
 			window->drawImage(getImageAtPos(positions[0]), t, y);
-			if (y + getImageAtPos(positions[0])->h < collision->getBound_b()) window->drawImage(getImageAtPos(positions[1]), t, y + getImageAtPos(positions[0])->h);
-			k = y + getImageAtPos(positions[0])->h + getImageAtPos(positions[1])->h;
+			k = y + getImageAtPos(positions[0])->h;
 			while (k < collision->getBound_b()) {
 				for (p = 0; p < getImageAtPos(positions[0])->w; p += getImageAtPos(positions[2])->w) {
 					window->drawImage(getImageAtPos(positions[2]), p + t, k);
 				}
 				k += getImageAtPos(positions[2])->h;
 			}
+			if (y + getImageAtPos(positions[0])->h < collision->getBound_b()) window->drawImage(getImageAtPos(positions[1]), t, y + getImageAtPos(positions[0])->h);
 			if (dH < 0) y -= getImageAtPos(positions[0])->h;
 			else y += getImageAtPos(positions[0])->h;
 			t += getImageAtPos(positions[0])->w;
 		}
 	}
 
+	void DynamicObject::preStep(double deltaTime) {
+		oX = collision->x;
+		oY = collision->y;
+		deltaT = deltaTime;
+	}
+
 	void DynamicObject::unintersectY(Object * other) {
-		DynamicObject * otherD = dynamic_cast<DynamicObject*>(other);
-		double accuracy = 1;
-		while (accuracy > 0.000000001) {
-			while (collision->colliding(other->collision)) {
-				if (otherD) {
-					if (vY < otherD->vY) {
-						collision->y += accuracy;
-						other->collision->y -= accuracy;
-					} else {
-						collision->y -= accuracy;
-						other->collision->y += accuracy;
-					}
-				} else {
-					if (vY < 0)
-						collision->y += accuracy;
-					else
-						collision->y -= accuracy;
-				}
-			}
-			accuracy/=10;
-			while (!collision->colliding(other->collision)) {
-				if (otherD) {
-					if (vY < otherD->vY) {
-						collision->y -= accuracy;
-						other->collision->y += accuracy;
-					} else {
-						collision->y += accuracy;
-						other->collision->y -= accuracy;
-					}
-				} else {
-					if (vY < 0)
-						collision->y -= accuracy;
-					else
-						collision->y += accuracy;
-				}
-			}
-			accuracy/=10;
-		}
-		while (collision->colliding(other->collision)) {
-			if (otherD) {
-				DynamicObject * otherD = (DynamicObject *) other;
-				if (vY < otherD->vY) {
-					collision->y += accuracy;
-					other->collision->y -= accuracy;
-				} else {
-					collision->y -= accuracy;
-					other->collision->y += accuracy;
-				}
-			} else {
-				if (vY < 0)
+		if (dynamic_cast<DynamicObject*>(other) && other->collision->getMid_y() < collision->getMid_y()) return; 
+		double accuracy = hailMath::max<double>(1, hailMath::abs_q(oY - collision->y));
+		bool movedUp = oY > collision->y && vY < 0;
+		while (accuracy > 0.0000000000001) {
+			if (collision->colliding(other->collision)) {
+				if (movedUp)
 					collision->y += accuracy;
 				else
 					collision->y -= accuracy;
+			} else {
+				if (movedUp)
+					collision->y -= accuracy;
+				else
+					collision->y += accuracy;
 			}
+			accuracy/=2;
+		}
+		if (collision->colliding(other->collision)) {
+			if (movedUp)
+				collision->y += accuracy;
+			else
+				collision->y -= accuracy;
 		}
 	}
 
 	void DynamicObject::unintersectX(Object * other) {
 		DynamicObject * otherD = dynamic_cast<DynamicObject*>(other);
+		if (otherD && other->collision->getMid_y() < collision->getMid_y()) return; 
 		double accuracy = 1;
+		int it;
 		while (accuracy > 0.000000001) {
-			while (collision->colliding(other->collision)) {
+			it = 0;
+			while (collision->colliding(other->collision) && it < 40) {
 				if (otherD) {
-					if (vX < otherD->vX) {
+					if (other->collision->getMid_x()<collision->getMid_x()) {
 						collision->x += accuracy;
 						other->collision->x -= accuracy;
 					} else {
@@ -201,11 +187,13 @@ namespace ObjectHandler {
 					else
 						collision->x -= accuracy;
 				}
+				it++;
 			}
 			accuracy/=10;
-			while (!collision->colliding(other->collision)) {
+			it = 0;
+			while (!collision->colliding(other->collision) && it < 40) {
 				if (otherD) {
-					if (vX < otherD->vX) {
+					if (other->collision->getMid_x()<collision->getMid_x()) {
 						collision->x -= accuracy;
 						other->collision->x += accuracy;
 					} else {
@@ -218,12 +206,14 @@ namespace ObjectHandler {
 					else
 						collision->x += accuracy;
 				}
+				it++;
 			}
 			accuracy/=10;
 		}
-		while (collision->colliding(other->collision)) {
+		it = 0;
+		while (collision->colliding(other->collision) && it < 40) {
 			if (otherD) {
-				if (vX < otherD->vX) {
+				if (other->collision->getMid_x()<collision->getMid_x()) {
 					collision->x += accuracy;
 					other->collision->x -= accuracy;
 				} else {
@@ -236,6 +226,7 @@ namespace ObjectHandler {
 				else
 					collision->x -= accuracy;
 			}
-		}
+			it++;
+		}//*/ std::cout << "X change disables" << std::endl;
 	}
 }

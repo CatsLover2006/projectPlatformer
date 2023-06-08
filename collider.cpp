@@ -5,6 +5,12 @@
 #include <iostream>
 
 namespace CollisionHandler {
+	bool lineOnLineCol(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4) {
+		double uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1));
+		double uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1));
+		return (uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1);
+	}
+
 	Collider::Collider() {
 		Collider(0,0);
 	}
@@ -77,8 +83,32 @@ namespace CollisionHandler {
 		return false;
 	}
 
+	bool Collider::lineColliding (double x1, double y1, double x2, double y2) {
+		return false;
+	}
+
 	bool BoxCollider::pointInCollider(double x, double y) {
 		return (y >= getBound_t() && y <= getBound_b()) && (x >= getBound_l() && x <= getBound_r());
+	}
+
+	bool BoxCollider::lineColliding (double x1, double y1, double x2, double y2) {
+		if (lineOnLineCol(x1, y1, x2, y2, getBound_l(), getBound_t(), getBound_l(), getBound_b())) return true;
+		if (lineOnLineCol(x1, y1, x2, y2, getBound_r(), getBound_t(), getBound_r(), getBound_b())) return true;
+		if (lineOnLineCol(x1, y1, x2, y2, getBound_l(), getBound_t(), getBound_r(), getBound_t())) return true;
+		if (lineOnLineCol(x1, y1, x2, y2, getBound_l(), getBound_b(), getBound_r(), getBound_b())) return true;
+		return false;
+	}
+
+	bool RightTriCollider::lineColliding (double x1, double y1, double x2, double y2) {
+		if (lineOnLineCol(x1, y1, x2, y2, this->x, this->y, this->x2, this->y2)) return true;
+		if (useTopside) {
+			if (lineOnLineCol(x1, y1, x2, y2, this->x, getBound_b(), this->x2, getBound_b())) return true;
+			if (lineOnLineCol(x1, y1, x2, y2, hailMath::min<double>(this->y2, this->y)==this->y?this->x:this->x2, this->y, hailMath::min<double>(this->y2, this->y)==this->y?this->x:this->x2, this->y2)) return true;
+		} else {
+			if (lineOnLineCol(x1, y1, x2, y2, this->x, getBound_t(), this->x2, getBound_t())) return true;
+			if (lineOnLineCol(x1, y1, x2, y2, hailMath::max<double>(this->y2, this->y)==this->y?this->x:this->x2, this->y, hailMath::max<double>(this->y2, this->y)==this->y?this->x:this->x2, this->y2)) return true;
+		}
+		return false;
 	}
 
 	bool RightTriCollider::pointInCollider(double x, double y) {

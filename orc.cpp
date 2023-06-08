@@ -7,23 +7,25 @@
 #include "hailLib/basemath.hpp"
 #include "hailLib/sdlWrapper.hpp"
 #include "object.hpp"
-#include "playerInteractableObjects.hpp"
 #include "player.hpp"
 #include "orc.hpp"
-#define PLAYER_ACCEL 1400
-#define PLAYER_FRICTION 3000
-#define PLAYER_SPEED 444
-#define JUMP_HEIGHT 400
+#define ACCEL 1000
+#define FRICTION 2000
+#define WALK_SPEED 100
+#define RUN_SPEED 300
 #define GRAVITY 800
 
 namespace GameObjects {
-	bool Player::checkAnimNoset() {
+	bool Orc::checkAnimNoset() {
 		if (anim == 3) return true;
-		if (anim == 6) return true;
 		return false;
 	}
 
-	Player::Player (double x, double y, std::vector<SDLwrapper::Image *> sprites): ObjectHandler::DynamicObject(new CollisionHandler::BoxCollider(x, y, 16, 32), GRAVITY, sprites) {
+	Orc::Orc (double x, double y, std::vector<SDLwrapper::Image *>* sprites, long positions[9], Player * player, SDLwrapper::Image * debugImage): ObjectHandler::DynamicObject(new CollisionHandler::BoxCollider(x, y, 24, 32), GRAVITY) {
+		this->player = player;
+		orcSprites = sprites;
+		for (int i = 0; i < 8; i++) this->positions[i] = positions[i];
+		this->debugImage = debugImage;
 		for (int i = 0; i < 11; i++) {
 			angles[i] = 0;
 			tAngles[i] = 0;
@@ -35,96 +37,50 @@ namespace GameObjects {
 		animProgress = 0;
 	}
 
-	void Player::giveInput (uint8_t input) {
-		inputState = input;
-	}
-
-	bool Player::checkCanJump() {
-		collision->y += 4;
-		for (ObjectHandler::Object * obj : objectList) {
-			if (obj == this) continue;
-			if (obj->isTrigger) continue;
-			if (dynamic_cast<Orc*>(obj)) continue; 
-			if (collision->colliding(obj->collision)) {
-				collision->y -= 4;
-				return true;
+	bool Orc::canSeePlayer() {
+		if (hailMath::abs_q(player->collision->getMid_y() - collision->getMid_y()) <= 100 && hailMath::abs_q(player->collision->getMid_x() - collision->getMid_x()) <= 640) {
+			for (ObjectHandler::Object * obj : objectList) {
+				if (dynamic_cast<DynamicObject*>(obj)) continue;
+				if (obj->isTrigger) continue;
+				if (obj->collision->lineColliding(collision->getMid_x(), collision->getMid_y(), player->collision->getMid_x(), player->collision->getMid_y())) {
+					return false;
+				}
 			}
-		}
-		collision->y -= 4;
-		return false;
+			return true;
+		} else return false;
 	}
 
-	void Player::damage(ObjectHandler::Object * obj) {
-		if (invinsibleTmr != 0) return;
-		vX = -PLAYER_SPEED * hailMath::sign<double>(obj->collision->x - collision->x);
-		vY = -PLAYER_SPEED/2.0;
-		invinsibleTmr = 2.5;
-		anim = 6;
-		health--;
-		isTrigger = true;
+	SDLwrapper::Image * Orc::getImageAtPos(long in) {
+		if (in == -1) return debugImage;
+		else if (in >= orcSprites->size()) return debugImage;
+		else return orcSprites->at(in);
 	}
 
-	void Player::step(double deltaTime) {
-		invinsibleTmr -= deltaTime;
-		if (invinsibleTmr < 0) invinsibleTmr = 0;
-		if (invinsibleTmr == 0) isTrigger = false;
-		else isTrigger = true;
-		if (wallTmr < 1) {
-			wallTmr += deltaTime * 0.6;
-		} else wallTmr = 1;
+	void Orc::step(double deltaTime) {
+		if (isnan(animProgress)) animProgress = 0;
 		animProgress += deltaTime;
 		vY += grav * deltaTime;
 		bool t_disabled = false;
-		if (anim == 6) wallTmr = 0.01;
-		if (!checkAnimNoset()) anim = 0;
-		if (!hadPressed) hadJumped = false;
-		canJump = checkCanJump();
-		if (canJump) wallTmr = 1;
-		if (inputState & 0b00001000) {
-			if (vX < PLAYER_SPEED) vX += deltaTime * PLAYER_ACCEL * wallTmr;
-			else vX = PLAYER_SPEED;
-			t_disabled = true;
-			flipped = false;
-			if (checkAnimNoset()) goto pastRight;
+		if (canSeePlayer()) {
 			anim = 1;
-			if (vX < 0) anim = 4;
-		} else if (vX > 0) vX -= deltaTime * PLAYER_FRICTION * wallTmr;
-		pastRight:
-		if (inputState & 0b00000100) {
-			if (vX > -PLAYER_SPEED) vX -= deltaTime * PLAYER_ACCEL * wallTmr;
-			else vX = -PLAYER_SPEED;
 			t_disabled = true;
-			flipped = true;
-			if (checkAnimNoset()) goto pastLeft;
-			anim = 1;
-			if (vX > 0) anim = 4;
-		} else if (vX < 0) vX += deltaTime * PLAYER_FRICTION * wallTmr;
-		pastLeft:
-		if (canJump) coyote = 14;
-		else if (coyote) coyote--;
-		hadPressed = inputState & 0b00000001;
-		if (coyote) {
-			if (inputState & 0b00000001) {
-				if (hadPressed && hadJumped) goto skipJump;
-				hadJumped = true;
-				vY = -JUMP_HEIGHT;
-				anim = 3;
-			} else if (anim == 3 && vY > -300) anim = 0;
-		} else if (vY < 0 && anim == 3) anim = 3;
-		else anim = 2;
-		skipJump:
+			vX -= deltaTime * ACCEL * hailMath::sign<double>(collision->getMid_x() - player->collision->getMid_x());
+			vX = hailMath::constrain<double>(vX, -RUN_SPEED, RUN_SPEED);
+			flipped = hailMath::sign<double>(collision->getMid_x() - player->collision->getMid_x()) > 0;
+		} else {
+			anim = 0;
+			if (hailMath::abs_q(vX) != 0) vX -= deltaTime * FRICTION * hailMath::sign<double>(vX);
+		}
 		if (hailMath::abs_q(vX) < 20 && !t_disabled) vX = 0; // 20 pixels per second is nothing
 		collision->y -= 4;
 		dontReset = false;
 		for (ObjectHandler::Object * obj : objectList) {
-			if (onWall) break;
 			if (obj == this) continue;
 			if (obj->isTrigger) continue;
 			if (collision->colliding(obj->collision)) {
-				if (dynamic_cast<Orc*>(obj)) {
-					damage(obj);
+				if (obj == player) {
 					continue;
-				} else if (anim == 6) anim = 0;
+				}
 				unintersectY(obj);
 				dontReset = true;
 			}
@@ -136,31 +92,20 @@ namespace GameObjects {
 		bool fixY = !dontReset;
 		collision->x += vX * deltaTime;
 		dontReset = false;
-		onWall = false;
 		for (ObjectHandler::Object * obj : objectList) {
 			if (obj == this) continue;
 			if (obj->isTrigger) continue;
 			if (collision->colliding(obj->collision)) {
-				if (dynamic_cast<Orc*>(obj)) {
-					damage(obj);
+				if (obj == player) {
+					player->damage(this);
 					continue;
 				}
 				unintersectX(obj);
-				if (!dynamic_cast<DynamicObject*>(obj)) dontReset = true;
-				onWall = true;
+				dontReset = true;
 			}
 		}
 		if (dontReset) {
-			if (!hasBaby && !canJump) anim = 5;
-			wallCoyote = 30;
-			wallDir = (vX/hailMath::abs_q(vX));
-			vX /= std::pow(2, deltaTime);
-		} else if (wallCoyote) wallCoyote--;
-		if (!hasBaby && wallCoyote && !(hadPressed && hadJumped) && inputState & 0b00000001) {
-			vY = -JUMP_HEIGHT;
-			vX = wallDir * -PLAYER_SPEED * 0.9;
-			anim = 3;
-			wallTmr = 0.02;
+			vX = 0;
 		}
 		collision->y += 4;
 		collision->y += vY * deltaTime;
@@ -171,10 +116,10 @@ namespace GameObjects {
 				if (obj == this) continue;
 				if (obj->isTrigger) continue;
 				if (collision->colliding(obj->collision)) {
-					if (dynamic_cast<Orc*>(obj)) {
-						damage(obj);
+					if (obj == player) {
+						player->damage(this);
 						continue;
-					} else if (anim == 6) anim = 0;
+					}
 					unintersectY(obj);
 					dontReset = true;
 					if (obj->collision->getBound_t() > collision->y) overLoad = true;
@@ -182,17 +127,7 @@ namespace GameObjects {
 			}
 			if (dontReset) {
 				if (overLoad) vY = hailMath::min<double>(vY, 0);
-				else vY = hailMath::max<double>(vY, 0);
-			}
-		}
-	triggerCheck:
-		// Handle triggers
-		for (ObjectHandler::Object * obj : objectList) {
-			if (obj == this) continue;
-			if (!obj->isTrigger) continue; 
-			if (collision->colliding(obj->collision)) {
-				InteractableObject * object = (InteractableObject*) obj; // We know it's an interactable object
-				object->handleInteraction(this);
+				else vY = 0;
 			}
 		}
 		updateLimbPos();
@@ -210,12 +145,12 @@ namespace GameObjects {
 		CALF_STEP = 8
 	} player_sprite_lst;
 
-	int Player::getFlipMult() {
+	int Orc::getFlipMult() {
 		if (flipped) return -1;
 		return 1;
 	}
 
-	void Player::updateLimbPos() {
+	void Orc::updateLimbPos() {
 		// Normal animation
 		switch (anim) {
 			case 4: { // Turnaround; Static Pose
@@ -235,38 +170,21 @@ namespace GameObjects {
 				animProgress = 0.125;
 				break;
 			}
-			case 3: { // Jump; Static Pose
-				tSOY = 0;
-				tAngles[0] = -10;
+			case 3: { // Walk
+				progress = fmod(animProgress / 2, .5);
+				tSOY = hailMath::abs_q(fmod(progress + .125, .25)-.125) * 3 - 3;
+				tAngles[0] = 10;
 				tAngles[1] = -10;
-				tAngles[3] = -130;
-				tAngles[4] = -30;
-				tAngles[5] = -70;
-				tAngles[6] = 70;
-				tAngles[7] = 70;
-				tAngles[8] = -15;
-				tAngles[9] = 30;
-				tAngles[10] = 0;
-				stepIn = false;
-				stepOut = false;
-				animProgress = 0;
-				break;
-			}
-			case 5: { // Airfall-slide
-				tSOY = 0;
-				tAngles[0] = 4;
-				tAngles[1] = -40;
-				tAngles[3] = -84;
-				tAngles[4] = -100;
-				tAngles[5] = -acos(14.0/15)*(180/hailMath::pi);
-				tAngles[6] = 0;
-				tAngles[7] = 90;
-				tAngles[8] = -10;
-				tAngles[9] = -acos(10.0/15)*(180/hailMath::pi);
-				tAngles[10] = 0;
-				stepIn = false;
-				stepOut = false;
-				animProgress = 0.25;
+				tAngles[3] = -tAngles[0] - hailMath::abs_q(fmod(progress + .25, .5)-.25) * 100 * 4 + 40;
+				tAngles[4] = -hailMath::abs_q(fmod(progress + .25, .5)-.25) * 100 * 4 + 20;
+				tAngles[5] = 40 * cos(progress * hailMath::pi * 4) - 10;
+				tAngles[6] = 70 + 70 * sin(progress * hailMath::pi * 4);
+				tAngles[7] = -tAngles[0] + hailMath::abs_q(fmod(.75 - progress, .5)-.25) * 100 * 4 - 50;
+				tAngles[8] = -hailMath::abs_q(fmod(progress, .5)-.25) * 150 * 4 + 20;
+				tAngles[9] = - 40 * cos(progress * hailMath::pi * 4) - 10;
+				tAngles[10] = 70 + 70 * sin(-progress * hailMath::pi * 4);
+				stepIn = progress > 0.15 && progress < 0.2;
+				stepOut = progress > 0.4 && progress < 0.45;
 				break;
 			}
 			case 2: { // Airfall
@@ -287,7 +205,7 @@ namespace GameObjects {
 				break;
 			}
 			case 1: { // Running
-				progress = fmod(animProgress / 1.2, .5);
+				progress = fmod(animProgress / 1.4, .5);
 				tSOY = hailMath::abs_q(fmod(progress + .125, .25)-.125) * 30 - 5;
 				tAngles[0] = 30;
 				tAngles[1] = -30;
@@ -322,13 +240,6 @@ namespace GameObjects {
 				break;
 			}
 		}
-		// Baby holding
-		if (hasBaby) {
-			tAngles[3] = 52.5;
-			tAngles[4] = -65;
-			tAngles[7] = 52.5;
-			tAngles[8] = -65;
-		}
 		// Smoothing
 		for (int i = 0; i < 11; i++) {
 			angles[i] += tAngles[i] * 0.1;
@@ -340,19 +251,8 @@ namespace GameObjects {
 		sOX /= 1.1;
 	}
 
-	void Player::setImage(int relevantImg, SDLwrapper::Image * setTo) {
-		switch (relevantImg) {
-			case 0: {
-				babyImg = setTo;
-				break;
-			}
-		}
-	}
-
-	void Player::draw(SDLwrapper::Window * window) {
+	void Orc::draw(SDLwrapper::Window * window) {
 		window->strokeRect(new SDLwrapper::Color(255, 255, 255), collision->x, collision->y, ((CollisionHandler::BoxCollider*)collision)->w, ((CollisionHandler::BoxCollider*)collision)->h);
-		if (fmod(invinsibleTmr, 0.09) > 0.045) return; // Invinsible flashing animation
-		// Start drawing
 		flipMult = getFlipMult();
 		mX = -2.5;
 		mY = 10;
@@ -383,7 +283,7 @@ namespace GameObjects {
 		bY = sin(angles[7] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(sprites[3], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[0] + angles[7]) * flipMult);
+		window->drawImageEx(getImageAtPos(positions[3]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[0] + angles[7]) * flipMult);
 		tX = 0;
 		tY = 5;
 		cX += aX * 2;
@@ -396,7 +296,7 @@ namespace GameObjects {
 		bY = sin(angles[8] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(hasBaby?sprites[7]:sprites[4], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[0] + angles[7] + angles[8]) * flipMult);
+		window->drawImageEx(getImageAtPos(positions[4]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[0] + angles[7] + angles[8]) * flipMult);
 		mX = -2.5;
 		mY = 9;
 		cX = 0;
@@ -407,7 +307,7 @@ namespace GameObjects {
 		bY = sin(angles[9] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(sprites[5], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, angles[9] * flipMult);
+		window->drawImageEx(getImageAtPos(positions[5]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, angles[9] * flipMult);
 		tX = 0;
 		tY = 5;
 		cX += aX * 2;
@@ -420,7 +320,7 @@ namespace GameObjects {
 		bY = sin(angles[10] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(stepIn?sprites[8]:sprites[6], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[9] + angles[10]) * flipMult);
+		window->drawImageEx(getImageAtPos(positions[stepIn?8:6]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[9] + angles[10]) * flipMult);
 		mX = -5;
 		mY = 10;
 		cX = 0;
@@ -431,20 +331,9 @@ namespace GameObjects {
 		bY = sin(angles[0] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(sprites[0], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 10, 15.0, flipped, false, angles[0] * flipMult);
+		window->drawImageEx(getImageAtPos(positions[0]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 10, 19.0, flipped, false, angles[0] * flipMult);
 		cX += aX * 2;
 		cY += aY * 2;
-		if (hasBaby) {
-			mX = -3.5;
-			mY = 10;
-			tX = -8.5;
-			tY = -6.5;
-			bX = cos(angles[0] * (hailMath::pi / 180));
-			bY = sin(angles[0] * (hailMath::pi / 180));
-			aX = tX * bX - tY * bY;
-			aY = tX * bY + tY * bX;
-			window->drawImageEx(babyImg, collision->getMid_x() + mX + (aX + sOX) * flipMult, collision->getBound_t() + mY + (aY + sOY), 7, 13.0, flipped, false, angles[0] * flipMult);
-		}
 		mX = -5;
 		mY = 10;
 		tX = 0;
@@ -457,7 +346,7 @@ namespace GameObjects {
 		bY = sin(angles[1] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(sprites[1], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 10, 10.0, flipped, false, (angles[0] + angles[1]) * flipMult);
+		window->drawImageEx(getImageAtPos(positions[1]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 10, 10.0, flipped, false, (angles[0] + angles[1]) * flipMult);
 		mX = -2.5;
 		mY = 9;
 		cX = 0;
@@ -468,7 +357,7 @@ namespace GameObjects {
 		bY = sin(angles[5] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(sprites[5], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, angles[5] * flipMult);
+		window->drawImageEx(getImageAtPos(positions[5]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, angles[5] * flipMult);
 		tX = 0;
 		tY = 5;
 		cX += aX * 2;
@@ -481,7 +370,7 @@ namespace GameObjects {
 		bY = sin(angles[6] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(stepOut?sprites[8]:sprites[6], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[6] + angles[5]) * flipMult);mX = -2.5;
+		window->drawImageEx(getImageAtPos(positions[stepOut?8:6]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[6] + angles[5]) * flipMult);mX = -2.5;
 		mY = 10;
 		cX = 0;
 		cY = 0;
@@ -504,7 +393,7 @@ namespace GameObjects {
 		bY = sin(angles[3] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(sprites[3], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[0] + angles[3]) * flipMult);
+		window->drawImageEx(getImageAtPos(positions[3]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[0] + angles[3]) * flipMult);
 		tX = 0;
 		tY = 5;
 		cX += aX * 2;
@@ -523,6 +412,6 @@ namespace GameObjects {
 		bY = sin(angles[4] * (hailMath::pi / 180));
 		aX = tX * bX - tY * bY;
 		aY = tX * bY + tY * bX;
-		window->drawImageEx(hasBaby?sprites[7]:sprites[4], collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[0] + angles[4] + angles[3]) * flipMult);
+		window->drawImageEx(getImageAtPos(positions[4]), collision->getMid_x() + mX + (aX + cX + sOX) * flipMult, collision->getBound_t() + mY + (aY + cY + sOY), 5.0, 10, flipped, false, (angles[0] + angles[4] + angles[3]) * flipMult);
 	}
 }

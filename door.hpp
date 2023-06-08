@@ -1,16 +1,15 @@
 namespace GameObjects {
-	class Crib: public InteractableObject {
+	class Door: public InteractableObject {
 	public:
 		void draw (SDLwrapper::Window * window);
 		void step (double deltaTime);
 		void handleInteraction(Player * player);
-		Crib (double x, double y, std::vector<SDLwrapper::Image *> * sprites, long spriteIndexes[3], SDLwrapper::Image * debugImage);
+		Door (double x, double y, std::vector<SDLwrapper::Image *> * sprites, long spriteIndexes[2], SDLwrapper::Image * debugImage);
+		bool backToDoor;
 	private:
 		std::vector<SDLwrapper::Image *> * sprites;
-		double babyAngle;
-		bool reverseBabyAngle;
-		bool hasBaby;
-		long spriteIndexes[3];
+		double t;
+		long spriteIndexes[2];
 		SDLwrapper::Image * debugImage;
 		SDLwrapper::Image * getImageAtPos(long in);
 	};
