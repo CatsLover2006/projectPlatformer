@@ -60,8 +60,25 @@ namespace GameObjects {
 		vY = -PLAYER_SPEED/2.0;
 		invinsibleTmr = 2.5;
 		anim = 6;
-		health--;
+		if (dynamic_cast<Orc*>(obj)) {
+			switch(dynamic_cast<Orc*>(obj)->type) {
+				case 0:
+				default: {
+					health--;
+					break;
+				}
+			}
+		} else health--;
 		isTrigger = true;
+	}
+
+	void Player::resetPlayer() {
+		invinsibleTmr = 0;
+		hasBaby = false;
+		health = 6;
+		vY = 0;
+		vX = 0;
+		inputState = 0;
 	}
 
 	void Player::step(double deltaTime) {
@@ -350,7 +367,6 @@ namespace GameObjects {
 	}
 
 	void Player::draw(SDLwrapper::Window * window) {
-		window->strokeRect(new SDLwrapper::Color(255, 255, 255), collision->x, collision->y, ((CollisionHandler::BoxCollider*)collision)->w, ((CollisionHandler::BoxCollider*)collision)->h);
 		if (fmod(invinsibleTmr, 0.09) > 0.045) return; // Invinsible flashing animation
 		// Start drawing
 		flipMult = getFlipMult();

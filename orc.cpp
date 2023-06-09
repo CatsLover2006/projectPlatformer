@@ -35,14 +35,16 @@ namespace GameObjects {
 		sOY = 0;
 		sOX = 0;
 		animProgress = 0;
+		type = 0;
 	}
 
 	bool Orc::canSeePlayer() {
-		if (hailMath::abs_q(player->collision->getMid_y() - collision->getMid_y()) <= 100 && hailMath::abs_q(player->collision->getMid_x() - collision->getMid_x()) <= 640) {
+		if (hailMath::abs_q(player->collision->getMid_x() - collision->getMid_x()) <= 640) {
 			for (ObjectHandler::Object * obj : objectList) {
 				if (dynamic_cast<DynamicObject*>(obj)) continue;
 				if (obj->isTrigger) continue;
-				if (obj->collision->lineColliding(collision->getMid_x(), collision->getMid_y(), player->collision->getMid_x(), player->collision->getMid_y())) {
+				if (obj->collision->lineColliding(collision->getMid_x(), collision->getBound_t(), player->collision->getMid_x(), player->collision->getBound_t()) &&
+					obj->collision->lineColliding(collision->getMid_x(), collision->getBound_t(), player->collision->getMid_x(), player->collision->getBound_b())) {
 					return false;
 				}
 			}
@@ -56,11 +58,8 @@ namespace GameObjects {
 		else return orcSprites->at(in);
 	}
 
-	void Orc::step(double deltaTime) {
-		if (isnan(animProgress)) animProgress = 0;
-		animProgress += deltaTime;
-		vY += grav * deltaTime;
-		bool t_disabled = false;
+	void Orc::behavior(double deltaTime) {
+		t_disabled = false;
 		if (canSeePlayer()) {
 			anim = 1;
 			t_disabled = true;
@@ -71,6 +70,13 @@ namespace GameObjects {
 			anim = 0;
 			if (hailMath::abs_q(vX) != 0) vX -= deltaTime * FRICTION * hailMath::sign<double>(vX);
 		}
+	}
+
+	void Orc::step(double deltaTime) {
+		if (isnan(animProgress)) animProgress = 0;
+		animProgress += deltaTime;
+		vY += grav * deltaTime;
+		behavior(deltaTime);
 		if (hailMath::abs_q(vX) < 20 && !t_disabled) vX = 0; // 20 pixels per second is nothing
 		collision->y -= 4;
 		dontReset = false;
@@ -252,7 +258,6 @@ namespace GameObjects {
 	}
 
 	void Orc::draw(SDLwrapper::Window * window) {
-		window->strokeRect(new SDLwrapper::Color(255, 255, 255), collision->x, collision->y, ((CollisionHandler::BoxCollider*)collision)->w, ((CollisionHandler::BoxCollider*)collision)->h);
 		flipMult = getFlipMult();
 		mX = -2.5;
 		mY = 10;

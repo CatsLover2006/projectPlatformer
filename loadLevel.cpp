@@ -67,9 +67,8 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 		}
 	}
 	enemyData->clear();
+	player->resetPlayer();
 	std::cout << "Cleared old level!" << std::endl;
-	player->hasBaby = false;
-	player->health = 6;
 	std::getline(levelFile, curLine);
 	delete emptyImg;
 	std::cout << "Loading empty texture: " << curLine << std::endl;

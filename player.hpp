@@ -9,6 +9,7 @@ namespace GameObjects {
 		void setImage(int relevantImg, SDLwrapper::Image * setTo);
 		void damage(ObjectHandler::Object * obj);
 		short health;
+		void resetPlayer();
 	private:
 		uint8_t inputState;
 		double animProgress;

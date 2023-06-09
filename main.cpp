@@ -29,6 +29,7 @@ std::chrono::duration<double> deltaTime;
 
 double deltaTimer = 0;
 double angle = 0;
+double waitTimer = 0;
 int loops;
 
 std::vector<ObjectHandler::Object *> level;
@@ -44,6 +45,8 @@ double camera_x, camera_y;
 std::vector<SDLwrapper::Image *> levelImages;
 std::vector<SDLwrapper::Image *> enemyImages;
 SDLwrapper::Image * debugImage;
+SDLwrapper::Font * lrgMenuFont;
+SDLwrapper::Font * medMenuFont;
 
 std::string curLvl;
 std::string basePath;
@@ -51,12 +54,16 @@ std::string basePath;
 bool lost = false;
 
 gameState state = MENU;
+gameState oldState = MENU;
+bool stateSwap = false;
 
 int main() {
 	std::cout << "Physics timestep is " << PHYSICS_TIMESTEP << "s" << std::endl;
 	SDLwrapper::Window * window = new SDLwrapper::Window(864, 480, "Project Platformer");
 	std::cout << "Loading Game Data..." << std::endl;
 	debugImage = new SDLwrapper::Image("assets/textures/debug.gif", window);
+	lrgMenuFont = new SDLwrapper::Font("assets/fonts/Geologica-Medium.ttf", 64);
+	medMenuFont = new SDLwrapper::Font("assets/fonts/Geologica-Medium.ttf", 32);
 	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Body.gif", window));
 	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Head_Main.gif", window));
 	playerImages.push_back(debugImage);
@@ -87,6 +94,7 @@ int main() {
 		deltaTimer += deltaTime.count();
 		loops = 0;
 		window->runInput();
+		oldState = state;
 		switch (state) {
 			case INGAME: {
 				inputState = 0;
@@ -131,23 +139,34 @@ int main() {
 				break;
 			}
 			case FINISHEDLEVEL: {
-
+				if (stateSwap) { // First run
+					waitTimer = 0;
+				}
 				while (deltaTimer > PHYSICS_TIMESTEP) {
 					deltaTimer -= PHYSICS_TIMESTEP;
+					waitTimer += PHYSICS_TIMESTEP;
+					if (waitTimer >= 1) {
+						state = MENU;
+						break;
+					}
+					loops++;
 				}
 				break;
 			}
 			case MENU: {
-				loadLevel(curLvl, &level, &enemies, player, &levelImages, &enemyImages, debugImage, window, bounds); // Reset
+				if (window->keyPressed("M")) {
+					loadLevel(curLvl, &level, &enemies, player, &levelImages, &enemyImages, debugImage, window, bounds);
+					state = INGAME;
+				}
 				while (deltaTimer > PHYSICS_TIMESTEP) {
 					deltaTimer -= PHYSICS_TIMESTEP;
+					loops++;
 				}
-				state = INGAME;
 				break;
 			}
 		}
+		stateSwap = state != oldState;
 		std::cout << loops << " physics iterations this frame" << std::endl;
-		window->resetTranslation();
 		switch (state) {
 			case INGAME: {
 				window->clearScreen(new SDLwrapper::Color(10, 200, 255, 255));
@@ -162,15 +181,22 @@ int main() {
 				break;
 			}
 			case FINISHEDLEVEL: {
-				if (lost) std::cout << "RIP L" << std::endl;
-				else std::cout << "GG!" << std::endl;
+				window->clearScreen(new SDLwrapper::Color(255, 255, 255, 255));
+				if (lost) {
+					window->drawTextCentered("RIP L", lrgMenuFont, new SDLwrapper::Color(0, 0, 0, 255), 432, 240);
+				} else {
+					window->drawTextCentered("GG!", lrgMenuFont, new SDLwrapper::Color(0, 0, 0, 255), 432, 240);
+				}
 				break;
 			}
 			case MENU: {
 				window->clearScreen(new SDLwrapper::Color(255, 255, 255, 255));
+				window->drawTextCentered("Press M to play debug level.", medMenuFont, new SDLwrapper::Color(0, 0, 0, 255), 432, 240);
 				break;
 			}
 		}
+		window->resetTranslation();
+		window->drawRect(new SDLwrapper::Color(0, 0, 0), window->mouseX-2.5, window->mouseY-2.5, 5, 5);
 		window->presentWindow();
 	}
 	window->quit();
