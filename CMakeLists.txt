@@ -38,7 +38,7 @@ add_executable(projectPlatformer MACOSX_BUNDLE ${sourceFiles})
 add_custom_command(
       TARGET projectPlatformer
       POST_BUILD
-      COMMAND plutil -replace NSHighResolutionCapable -bool true projectPlatformer/Contents/Info.plist
+      COMMAND plutil -replace NSHighResolutionCapable -bool true $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Info.plist
       )
 
 # Link libs
