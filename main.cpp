@@ -233,9 +233,10 @@ int main() {
 					curLvl = basePath + levelList.at(menuScroll)->path;
 				}
 				if (window->keyPressed("M")) {
-					loadLevel(curLvl, &level, &enemies, player, &levelImages, &enemyImages, debugImage, window, bounds);
-					state = INGAME;
-					break;
+					if (loadLevel(curLvl, &level, &enemies, player, &levelImages, &enemyImages, debugImage, window, bounds)) {
+						state = INGAME;
+						break;
+					}
 				}
 				oMen = ~men;
 				while (deltaTimer > PHYSICS_TIMESTEP) {

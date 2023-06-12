@@ -24,7 +24,7 @@ using namespace GameObjects;
 
 SDLwrapper::Image * emptyImg;
 
-void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* levelData, std::vector<ObjectHandler::DynamicObject *>* enemyData,
+bool loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* levelData, std::vector<ObjectHandler::DynamicObject *>* enemyData,
 		GameObjects::Player * player, std::vector<SDLwrapper::Image *>* images, std::vector<SDLwrapper::Image *>* enemyImages, SDLwrapper::Image * debugImg, 
 		SDLwrapper::Window * window, double bounds[4]) {
 	if (levelFile.is_open()) {
@@ -35,7 +35,7 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 	levelFile.open(filename, std::ifstream::in);
 	if (!levelFile.is_open()) {
 		std::cout << "Level file could not be loaded..." << std::endl;
-		return;
+		return false;
 	}
 	std::cout << "Clearing images..." << std::endl;
 	for (SDLwrapper::Image * img : *images) {
@@ -183,4 +183,5 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 	for (int i = 0; i < 4; i++) bounds[i] = lineData[i];
 	std::cout << "Loaded level!" << std::endl;
 	levelFile.close();
+	return true;
 }
