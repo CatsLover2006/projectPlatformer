@@ -16,7 +16,7 @@ std::ifstream levelFile;
 std::string curLine;
 std::string curData;
 std::vector<double> lineData = {0};
-const std::string delim = "|";
+std::string delim = "|";
 
 using namespace ObjectHandler;
 using namespace CollisionHandler;
@@ -78,8 +78,16 @@ void loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 	while (curLine != "") {
 		curData = curLine.substr(0, curLine.find(delim));
 		curLine.erase(0, curLine.find(delim) + delim.length());
-		std::cout << "Loading texture: " << curData << std::endl;
-		images->push_back(new SDLwrapper::Image(curData, window));
+		std::cout << "Loading texture: " << curData.substr(0, curData.find(";")) << std::endl;
+		SDLwrapper::Image * img = new SDLwrapper::Image(curData.substr(0, curData.find(";")), window);
+		if (curData.find(";") + 1) {
+			int startIDX = curData.find(";") + 1;
+			int endIDX = curData.find(",");
+			std::cout << "Resolution: " << curData.substr(startIDX, endIDX-startIDX) << "x" << curData.substr(endIDX+1, -1) << std::endl;
+			img->w = stoi(curData.substr(startIDX, endIDX-startIDX));
+			img->h = stoi(curData.substr(endIDX+1, -1));
+		}
+		images->push_back(img);
 	}
 	while (lineData[0] != -1) {
 		lineData.clear();

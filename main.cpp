@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cstdint>
 #include <cmath>
 #include <chrono>
@@ -30,7 +31,10 @@ std::chrono::duration<double> deltaTime;
 double deltaTimer = 0;
 double angle = 0;
 double waitTimer = 0;
+int menuScroll = 0;
 int loops;
+
+uint8_t men, oMen;
 
 std::vector<ObjectHandler::Object *> level;
 std::vector<ObjectHandler::DynamicObject *> enemies;
@@ -47,6 +51,7 @@ std::vector<SDLwrapper::Image *> enemyImages;
 SDLwrapper::Image * debugImage;
 SDLwrapper::Font * lrgMenuFont;
 SDLwrapper::Font * medMenuFont;
+SDLwrapper::Font * smlMenuFont;
 
 std::string curLvl;
 std::string basePath;
@@ -57,27 +62,88 @@ gameState state = MENU;
 gameState oldState = MENU;
 bool stateSwap = false;
 
+class Level {
+	public:
+		std::string name;
+		std::string path;
+		Level(std::string name, std::string path) {
+			this->name = name;
+			this->path = path;
+		};
+		Level() {
+			name = "";
+			path = "";
+		};
+};
+
+std::vector<Level *> levelList;
+std::ifstream lstFile;
+
+void loadLevelList(std::string filename) {
+	if (lstFile.is_open()) {
+		lstFile.close();
+		std::cout << "Closed level list file." << std::endl;
+	}
+	lstFile.open(filename, std::ifstream::in);
+	if (!lstFile.is_open()) {
+		std::cout << "Level file could not be loaded..." << std::endl;
+		return;
+	}
+	std::string curLine, curData, delim = "|";
+	std::vector<std::string> lineData;
+	lineData.push_back(" ");
+	std::cout << "Loading level list: " << filename << std::endl;
+	if (levelList.size() != 0) {
+		std::cout << "Clearing old level list..." << std::endl;
+		for (Level * lvl : levelList) {
+			if (lvl) {
+				delete lvl;
+				lvl = nullptr;
+			}
+		}
+	}
+	levelList.clear();
+	std::getline(lstFile, curLine);
+	while (lineData[0] != "") {
+		lineData.clear();
+		if (curLine == "") break;
+		while (curLine != "") {
+			curData = curLine.substr(0, curLine.find(delim));
+			curLine.erase(0, curLine.find(delim) + delim.length());
+			lineData.push_back(curData);
+		}
+		levelList.push_back(new Level(lineData.at(0), lineData.at(1)));
+		std::getline(lstFile, curLine);
+	}
+	std::cout << "Loaded level list!" << std::endl;
+	lstFile.close();
+}
+
 int main() {
 	std::cout << "Physics timestep is " << PHYSICS_TIMESTEP << "s" << std::endl;
+	std::cout << "Creating window..." << std::endl;
 	SDLwrapper::Window * window = new SDLwrapper::Window(864, 480, "Project Platformer");
 	std::cout << "Loading Game Data..." << std::endl;
 	debugImage = new SDLwrapper::Image("assets/textures/debug.gif", window);
 	lrgMenuFont = new SDLwrapper::Font("assets/fonts/Geologica-Medium.ttf", 64);
 	medMenuFont = new SDLwrapper::Font("assets/fonts/Geologica-Medium.ttf", 32);
-	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Body.gif", window));
-	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Head_Main.gif", window));
+	smlMenuFont = new SDLwrapper::Font("assets/fonts/Geologica-Medium.ttf", 16);
+	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Body_Nu.gif", window)); 
+	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Head.gif", window));
 	playerImages.push_back(debugImage);
-	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Arm_Top.gif", window));
-	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Arm_Bottom.gif", window));
-	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Leg_Top.gif", window));
-	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Leg_Bottom.gif", window));
-	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Arm_Bottom_Carry.gif", window));
-	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Leg_Bottom_Step.gif", window));
+	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Arm_Top_Nu.gif", window));
+	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Arm_Bottom_Nu.gif", window));
+	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Leg_Top_Nu.gif", window));
+	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Leg_Bottom_Nu.gif", window));
+	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Arm_Bottom_Nu.gif", window)); // Carry
+	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Leg_Bottom_Step_Nu.gif", window));
+	playerImages.push_back(new SDLwrapper::Image("assets/textures/Player/Elbow_Kneecap.gif", window));
 	player = new GameObjects::Player(200, -10, playerImages);
 	std::cout << "Loaded Game Data!" << std::endl;
 	std::cout << "Creating Objects..." << std::endl;
 	basePath = SDL_GetBasePath();
-	curLvl = basePath + "assets/levels/debuglevel.lvl";
+	loadLevelList(basePath + "assets/levels/levels.lst");
+	curLvl = basePath + levelList.at(0)->path;
 	camera_x = 0;
 	camera_y = 0;
 	std::cout << "Created Objects!" << std::endl;
@@ -129,7 +195,8 @@ int main() {
 					camera_y += (player->collision->y - 352) * 0.1;
 					camera_y /= 1.1;
 					camera_y = hailMath::constrain<double>(camera_y, bounds[1], bounds[3] - 480);
-					if (player->collision->y > bounds[3]) {
+					if (player->collision->y > bounds[3] && !player->dead) player->kill();
+					if (player->dead && player->deadTmr <= 0) {
 						lost = true;
 						state = FINISHEDLEVEL;
 						break;
@@ -154,10 +221,23 @@ int main() {
 				break;
 			}
 			case MENU: {
+				men = 0;
+				men = men | ((window->keyPressed("S") || window->keyPressed("Down")) * 0b00000001);
+				men = men | ((window->keyPressed("W") || window->keyPressed("Up")) * 0b00000010);
+				if (menuScroll > 0 && ((men & oMen) & 0b00000010)) {
+					menuScroll--;
+					curLvl = basePath + levelList.at(menuScroll)->path;
+				}
+				if (menuScroll < (levelList.size() - 1) && ((men & oMen) & 0b00000001)) {
+					menuScroll++;
+					curLvl = basePath + levelList.at(menuScroll)->path;
+				}
 				if (window->keyPressed("M")) {
 					loadLevel(curLvl, &level, &enemies, player, &levelImages, &enemyImages, debugImage, window, bounds);
 					state = INGAME;
+					break;
 				}
+				oMen = ~men;
 				while (deltaTimer > PHYSICS_TIMESTEP) {
 					deltaTimer -= PHYSICS_TIMESTEP;
 					loops++;
@@ -191,7 +271,14 @@ int main() {
 			}
 			case MENU: {
 				window->clearScreen(new SDLwrapper::Color(255, 255, 255, 255));
-				window->drawTextCentered("Press M to play debug level.", medMenuFont, new SDLwrapper::Color(0, 0, 0, 255), 432, 240);
+				window->translate(0, -18 * menuScroll);
+				for (int i = 0; i < levelList.size(); i++) {
+					window->drawTextCentered(levelList.at(i)->name, smlMenuFont, new SDLwrapper::Color(0, 0, i == menuScroll?255:0, 255), 432, 240);
+					window->translate(0, 18);
+				}
+				window->resetTranslation();
+				window->drawRect(new SDLwrapper::Color(0, 0, 0, 255), 0, 0, 864, 64);
+				window->drawTextCentered("Press M to play level.", medMenuFont, new SDLwrapper::Color(255, 255, 255, 255), 432, 32);
 				break;
 			}
 		}

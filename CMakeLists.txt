@@ -32,12 +32,7 @@ find_package(SDL2_ttf REQUIRED)
 include_directories(${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS})
 
 # Create executable
-set(OS "macOS" CACHE STRING "Build for what OS?")
-if (${OS} STREQUAL "macOS")
-  add_executable(projectPlatformer MACOSX_BUNDLE ${sourceFiles})
-elseif (${OS} STREQUAL "Windows")
-  add_executable(projectPlatformer WIN32 ${sourceFiles})
-endif()
+add_executable(projectPlatformer MACOSX_BUNDLE ${sourceFiles})
 
 # Link libs
 target_link_libraries(projectPlatformer ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES} ${SDL2TTF_LIBRARY})

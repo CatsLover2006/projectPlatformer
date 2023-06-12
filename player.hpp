@@ -8,8 +8,10 @@ namespace GameObjects {
 		Player (double x, double y, std::vector<SDLwrapper::Image *> sprites);
 		void setImage(int relevantImg, SDLwrapper::Image * setTo);
 		void damage(ObjectHandler::Object * obj);
-		short health;
 		void resetPlayer();
+		bool dead;
+		double deadTmr;
+		void kill();
 	private:
 		uint8_t inputState;
 		double animProgress;
@@ -40,5 +42,6 @@ namespace GameObjects {
 		bool hadPressed;
 		double invinsibleTmr;
 		bool render;
+		short health;
 	};
 }
