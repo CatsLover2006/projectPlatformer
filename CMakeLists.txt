@@ -34,6 +34,13 @@ include_directories(${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS})
 # Create executable
 add_executable(projectPlatformer MACOSX_BUNDLE ${sourceFiles})
 
+# Hi-res
+add_custom_command(
+      TARGET projectPlatformer
+      POST_BUILD
+      COMMAND plutil -replace NSHighResolutionCapable -bool true projectPlatformer/Contents/Info.plist
+      )
+
 # Link libs
 target_link_libraries(projectPlatformer ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES} ${SDL2TTF_LIBRARY})
 
