@@ -7,7 +7,7 @@ namespace GameObjects {
 		void setImage(int relevantImg, SDLwrapper::Image * setTo);
 		short health;
 		short type;
-	private:
+	protected: // Used by orc subclasses
 		std::vector<SDLwrapper::Image *>* orcSprites;
 		double sX, sY;
 		SDLwrapper::Image * debugImage;
@@ -30,10 +30,28 @@ namespace GameObjects {
 		int flipMult;
 		double tX, tY, cX, cY, aX, aY, bX, bY, mX, mY;
 		bool stepIn, stepOut;
-		bool atLedge;
+		bool atLedge();
 		bool dontReset;
 		bool overLoad;
 		bool t_disabled;
-		virtual void behavior(double deltaTimes);
+		virtual void behavior(double deltaTime);
+		virtual void animate(short anim, double animProgress);
+		bool ignoreOrcCol;
+	};
+	class FastOrc: public Orc {
+	public:
+		FastOrc (double x, double y, std::vector<SDLwrapper::Image *>* sprites, long positions[9], Player * player, SDLwrapper::Image * debugImage);
+	private:
+		void behavior(double deltaTime);
+		void animate(short anim, double animProgress);
+	};
+	class SmartOrc: public Orc {
+	public:
+		SmartOrc (double x, double y, std::vector<SDLwrapper::Image *>* sprites, long positions[9], Player * player, SDLwrapper::Image * debugImage);
+	private:
+		void behavior(double deltaTime);
+		double followTime;
+		double lastSeenDir;
+		bool ignorePlayer;
 	};
 }

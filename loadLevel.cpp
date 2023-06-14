@@ -168,6 +168,19 @@ bool loadLevel(std::string filename, std::vector<ObjectHandler::Object *>* level
 				long data[9];
 				for (int i = 0; i < 9; i++) data[i] = lineData[i + 3];
 				enemyData->push_back(new Orc(lineData[1], lineData[2], enemyImages, data, player, debugImg));
+				break;
+			}
+			case 1: {
+				long data[9];
+				for (int i = 0; i < 9; i++) data[i] = lineData[i + 3];
+				enemyData->push_back(new FastOrc(lineData[1], lineData[2], enemyImages, data, player, debugImg));
+				break;
+			}
+			case 2: {
+				long data[9];
+				for (int i = 0; i < 9; i++) data[i] = lineData[i + 3];
+				enemyData->push_back(new SmartOrc(lineData[1], lineData[2], enemyImages, data, player, debugImg));
+				break;
 			}
 			default: break;
 		}

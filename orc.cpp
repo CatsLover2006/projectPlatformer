@@ -38,6 +38,46 @@ namespace GameObjects {
 		type = 0;
 	}
 
+	FastOrc::FastOrc (double x, double y, std::vector<SDLwrapper::Image *>* sprites, long positions[9], Player * player, SDLwrapper::Image * debugImage): Orc(x, y, sprites, positions, player, debugImage) {}
+
+	SmartOrc::SmartOrc (double x, double y, std::vector<SDLwrapper::Image *>* sprites, long positions[9], Player * player, SDLwrapper::Image * debugImage): Orc(x, y, sprites, positions, player, debugImage) {
+		ignorePlayer = 0;
+		followTime = 0;
+	}
+
+	void FastOrc::behavior(double deltaTime) {
+		t_disabled = false;
+		if (canSeePlayer()) {
+			anim = 1;
+			t_disabled = true;
+			vX -= deltaTime * (ACCEL/2) * hailMath::sign<double>(collision->getMid_x() - player->collision->getMid_x());
+			if (flipped && vX > 0 || !flipped && vX < 0) vX -= deltaTime * FRICTION * hailMath::sign<double>(vX);
+			vX = hailMath::constrain<double>(vX, -RUN_SPEED * 1.4, RUN_SPEED * 1.4);
+			flipped = (collision->getMid_x() - player->collision->getMid_x()) > 0;
+		} else {
+			anim = 0;
+			if (hailMath::abs_q(vX) != 0) vX -= deltaTime * FRICTION * hailMath::sign<double>(vX);
+		}
+	}
+
+	bool Orc::atLedge() {
+		collision->x += 32 * (flipped?-1:1);
+		collision->y += 32;
+		for (ObjectHandler::Object * obj : objectList) {
+			if (obj == this) continue;
+			if (obj->isTrigger) continue;
+			if (dynamic_cast<Orc*>(obj)) continue; 
+			if (collision->colliding(obj->collision)) {
+				collision->x -= 32 * (flipped?-1:1);
+				collision->y -= 32;
+				return false;
+			}
+		}
+		collision->x -= 32 * (flipped?-1:1);
+		collision->y -= 32;
+		return true;
+	}
+
 	bool Orc::canSeePlayer() {
 		if (hailMath::abs_q(player->collision->getMid_x() - collision->getMid_x()) <= 640) {
 			for (ObjectHandler::Object * obj : objectList) {
@@ -64,8 +104,36 @@ namespace GameObjects {
 			anim = 1;
 			t_disabled = true;
 			vX -= deltaTime * ACCEL * hailMath::sign<double>(collision->getMid_x() - player->collision->getMid_x());
+			if (flipped && vX > 0 || !flipped && vX < 0) vX -= deltaTime * FRICTION * hailMath::sign<double>(vX);
 			vX = hailMath::constrain<double>(vX, -RUN_SPEED, RUN_SPEED);
-			flipped = hailMath::sign<double>(collision->getMid_x() - player->collision->getMid_x()) > 0;
+			flipped = (collision->getMid_x() - player->collision->getMid_x()) > 0;
+		} else {
+			anim = 0;
+			if (hailMath::abs_q(vX) != 0) vX -= deltaTime * FRICTION * hailMath::sign<double>(vX);
+		}
+	}
+
+	void SmartOrc::behavior(double deltaTime) {
+		if (followTime > 0) followTime -= deltaTime;
+		bool seesPlayer = canSeePlayer();
+		if (seesPlayer && !ignorePlayer) {
+			followTime = 0.5;
+			lastSeenDir = hailMath::sign<double>(collision->getMid_x() - player->collision->getMid_x());
+		}
+		if (followTime <= 0) ignorePlayer = false;
+		t_disabled = false;
+		if (followTime > 0) {
+			flipped = lastSeenDir > 0;
+			if (atLedge()) {
+				if (hailMath::abs_q(vX) != 0) vX -= deltaTime * FRICTION * hailMath::sign<double>(vX);
+				anim = 0;
+				return;
+			}
+			anim = 1;
+			t_disabled = true;
+			vX -= deltaTime * ACCEL * lastSeenDir;
+			if (flipped && vX > 0 || !flipped && vX < 0) vX -= deltaTime * FRICTION * hailMath::sign<double>(vX);
+			vX = hailMath::constrain<double>(vX, -RUN_SPEED/1.1, RUN_SPEED/1.1);
 		} else {
 			anim = 0;
 			if (hailMath::abs_q(vX) != 0) vX -= deltaTime * FRICTION * hailMath::sign<double>(vX);
@@ -80,11 +148,20 @@ namespace GameObjects {
 		if (hailMath::abs_q(vX) < 20 && !t_disabled) vX = 0; // 20 pixels per second is nothing
 		collision->y -= 4;
 		dontReset = false;
+		bool handleOrcCollisions = false;
 		for (ObjectHandler::Object * obj : objectList) {
-			if (obj == this) continue;
+			if (obj == this) {
+				handleOrcCollisions = true;
+				continue;
+			}
 			if (obj->isTrigger) continue;
 			if (collision->colliding(obj->collision)) {
 				if (obj == player) {
+					continue;
+				}
+				if (dynamic_cast<Orc*>(obj)) {
+					if (!handleOrcCollisions) continue;
+					dontReset = true;
 					continue;
 				}
 				unintersectY(obj);
@@ -98,12 +175,21 @@ namespace GameObjects {
 		bool fixY = !dontReset;
 		collision->x += vX * deltaTime;
 		dontReset = false;
+		handleOrcCollisions = false;
 		for (ObjectHandler::Object * obj : objectList) {
-			if (obj == this) continue;
+			if (obj == this) {
+				handleOrcCollisions = true;
+				continue;
+			}
 			if (obj->isTrigger) continue;
 			if (collision->colliding(obj->collision)) {
 				if (obj == player) {
 					player->damage(this);
+					continue;
+				}
+				if (dynamic_cast<Orc*>(obj)) {
+					if (!handleOrcCollisions) continue;
+					dontReset = true;
 					continue;
 				}
 				unintersectX(obj);
@@ -118,12 +204,21 @@ namespace GameObjects {
 		if (oY < collision->y) {
 			overLoad = false;
 			dontReset = false;
+			handleOrcCollisions = false;
 			for (ObjectHandler::Object * obj : objectList) {
-				if (obj == this) continue;
+				if (obj == this) {
+					handleOrcCollisions = true;
+					continue;
+				}
 				if (obj->isTrigger) continue;
 				if (collision->colliding(obj->collision)) {
 					if (obj == player) {
 						player->damage(this);
+						continue;
+					}
+					if (dynamic_cast<Orc*>(obj)) {
+					if (!handleOrcCollisions) continue;
+						dontReset = true;
 						continue;
 					}
 					unintersectY(obj);
@@ -156,8 +251,7 @@ namespace GameObjects {
 		return 1;
 	}
 
-	void Orc::updateLimbPos() {
-		// Normal animation
+	void Orc::animate(short anim, double animProgress) {
 		switch (anim) {
 			case 4: { // Turnaround; Static Pose
 				tSOY = 5;
@@ -246,6 +340,37 @@ namespace GameObjects {
 				break;
 			}
 		}
+	}
+
+	void FastOrc::animate(short anim, double animProgress) {
+		switch (anim) {
+			case 1: { // Running
+				progress = fmod(animProgress / 1.2, .5);
+				tSOY = hailMath::abs_q(fmod(progress + .125, .25)-.125) * 30 - 5;
+				tAngles[0] = 50;
+				tAngles[1] = -50;
+				tAngles[3] = -tAngles[0] - hailMath::abs_q(fmod(progress + .25, .5)-.25) * 100 * 4 + 80;
+				tAngles[4] = -hailMath::abs_q(fmod(progress + .25, .5)-.25) * 150 * 4 + 20;
+				tAngles[5] = 80 * cos(progress * hailMath::pi * 4) + 10;
+				tAngles[6] = 70 + 70 * sin(progress * hailMath::pi * 4);
+				tAngles[7] = -tAngles[0] + hailMath::abs_q(fmod(.75 - progress, .5)-.25) * 100 * 4 - 40;
+				tAngles[8] = -hailMath::abs_q(fmod(progress, .5)-.25) * 150 * 4 + 20;
+				tAngles[9] = 30 - 80 * cos(progress * hailMath::pi * 4);
+				tAngles[10] = 70 + 70 * sin(-progress * hailMath::pi * 4);
+				stepIn = progress > 0.15 && progress < 0.2;
+				stepOut = progress > 0.4 && progress < 0.45;
+				break;
+			}
+			default: { // IDK what this is, backup to parent
+				Orc::animate(anim, animProgress);
+				break;
+			}
+		}
+	}
+
+	void Orc::updateLimbPos() {
+		// Normal animation
+		animate(anim, animProgress);
 		// Smoothing
 		for (int i = 0; i < 11; i++) {
 			angles[i] += tAngles[i] * 0.1;

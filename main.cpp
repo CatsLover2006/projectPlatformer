@@ -234,6 +234,7 @@ int main() {
 				}
 				if (window->keyPressed("M")) {
 					if (loadLevel(curLvl, &level, &enemies, player, &levelImages, &enemyImages, debugImage, window, bounds)) {
+						deltaTimer = 0;
 						state = INGAME;
 						break;
 					}

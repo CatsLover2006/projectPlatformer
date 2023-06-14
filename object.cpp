@@ -19,7 +19,8 @@ namespace ObjectHandler {
 	Object::Object (CollisionHandler::Collider * collision) {
 		this->collision = collision;
 		self = idGenerator(random);
-		objectList.push_back(this);
+		if (dynamic_cast<DynamicObject*>(this)) objectList.insert(objectList.begin(), this);
+		else objectList.push_back(this);
 		self_ptr = this;
 		isTrigger = false;
 	}

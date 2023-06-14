@@ -269,8 +269,8 @@ namespace GameObjects {
 			if (obj == this) continue;
 			if (!obj->isTrigger) continue; 
 			if (collision->colliding(obj->collision)) {
-				InteractableObject * object = (InteractableObject*) obj; // We know it's an interactable object
-				object->handleInteraction(this);
+				InteractableObject * object = dynamic_cast<InteractableObject *>(obj);
+				if (object) object->handleInteraction(this);
 			}
 		}
 		if (health == 0) {
