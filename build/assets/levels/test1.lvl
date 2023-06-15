@@ -1,0 +1,17 @@
+assets/textures/empty.gif
+assets/textures/Crib/crib_front_test.gif|assets/textures/Crib/crib_back_test.gif|assets/textures/Babies/Baby_Test.gif|assets/textures/empty.gif|assets/textures/empty.gif|assets/textures/debugSlopeUpHalf.gif|assets/textures/DirtTex/N.png;32,32|assets/textures/DirtTex/T.png;32,32|
+0|48|320|-1|0|
+1|48|128|1|2|0|
+2|0|0|32|480|6|6|6|6|6|6|6|6|6|
+2|0|0|864|0|6|6|6|6|6|6|6|6|6|
+2|832|0|32|480|6|6|6|6|6|6|6|6|6|
+2|0|352|368|160|6|7|7|6|6|6|6|6|6|
+2|496|352|368|160|7|7|6|6|6|6|6|6|6|
+2|0|160|704|96|6|7|7|6|6|6|6|6|6|
+4|608|160|64|-32|5|-1|-1|
+2|672|128|32|64|-1|-1|-1|-1|-1|-1|-1|-1|-1|
+-1|
+assets/textures/TestTex/Mid.gif|assets/textures/TestTex/Top.gif|
+0|144|128|1|0|-1|-1|-1|-1|-1|-1|-1|
+-1|
+0|0|864|480|

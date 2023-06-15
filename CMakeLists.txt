@@ -56,7 +56,6 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 )
 elseif(MSYS)
 add_executable(projectPlatformer WIN32 ${sourceFiles})
-set(ARCH_LIBS -Wall stdc++ -L/mingw64/lib mingwex mingw32)
 endif()
 
 target_link_libraries(projectPlatformer ${ARCH_LIBS}

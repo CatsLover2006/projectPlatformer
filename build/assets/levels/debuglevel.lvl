@@ -1,0 +1,17 @@
+assets/textures/empty.gif
+assets/textures/TestTex/Mid.gif|assets/textures/TestTex/Top.gif|assets/textures/TestTex/TopLeft.gif|assets/textures/TestTex/TopRight.gif|assets/textures/Crib/crib_front_test.gif|assets/textures/Crib/crib_back_test.gif|assets/textures/Babies/Baby_Test.gif|assets/textures/debugSlope.gif|assets/textures/debugSlopeUp.gif|assets/textures/debugSlopeUpHalf.gif|
+0|48|352|-1|0|
+1|784|320|5|6|4|
+2|0|384|320|96|1|1|3|0|0|-1|0|0|-1|
+2|480|352|416|128|2|1|1|-1|0|0|-1|0|0|
+2|416|320|32|192|2|-1|-1|-1|-1|-1|-1|-1|-1|
+2|128|255|128|64|-1|-1|-1|-1|-1|-1|-1|-1|-1|
+2|864|0|64|480|-1|-1|-1|-1|-1|-1|-1|-1|-1|
+3|384|255|128|-64|9|-1|6|
+4|-16|320|64|64|7|-1|-1|
+4|448|320|64|64|7|-1|-1|
+-1|
+assets/textures/TestTex/Mid.gif|assets/textures/TestTex/Top.gif|
+0|384|200|1|0|-1|-1|-1|-1|-1|-1|-1|
+-1|
+0|0|896|480|
