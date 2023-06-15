@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <exception>
+#include <vector>
 #include "hailLib/sdlWrapper.hpp"
 #include "hailLib/basemath.hpp"
 #include "collider.hpp"

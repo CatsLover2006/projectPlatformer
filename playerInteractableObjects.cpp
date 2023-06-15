@@ -3,6 +3,7 @@
 #include <typeinfo>
 #include <cmath>
 #include <vector>
+#include <string>
 #include "collider.hpp"
 #include "hailLib/basemath.hpp"
 #include "hailLib/sdlWrapper.hpp"

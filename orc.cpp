@@ -141,7 +141,7 @@ namespace GameObjects {
 	}
 
 	void Orc::step(double deltaTime) {
-		if (isnan(animProgress)) animProgress = 0;
+		if (std::isnan(animProgress)) animProgress = 0;
 		animProgress += deltaTime;
 		vY += grav * deltaTime;
 		behavior(deltaTime);
